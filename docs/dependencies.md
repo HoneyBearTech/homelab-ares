@@ -86,7 +86,8 @@ socket-proxy none).
 | PeaNUT | 5.10.0: 87 | 6.0.0: 26 | Fixes three critical issues in its web framework (Next.js); 6.0 also puts its web UI and API behind a login ([interfaces.md](interfaces.md#settings)) |
 | Portainer | 2.39.3: 60 | 2.39.8: 8 | A patch release on the same long-term-support line, so the agents on other hosts stay compatible |
 
-**Not reachable in this stack** (dismissed in code scanning with this reason once the scan of the new images runs):
+After these changes the scan on `main` reported 269 open alerts. **Not reachable in this stack** (100 alerts,
+dismissed in code scanning with this reason):
 
 | Image | Package | Why it can't be reached |
 | --- | --- | --- |
@@ -94,8 +95,9 @@ socket-proxy none).
 | Nginx Proxy Manager | the npm CLI's own modules under `/usr/lib/node_modules` (`brace-expansion`, `pacote`, `sigstore`, …) | The npm command line is only used to build the image; it never runs in the container |
 | Uptime Kuma | Go standard library in `extra/healthcheck` | The health-check binary only sends one HTTP request to Uptime Kuma inside the container |
 
-**Open, waiting for upstream.** No newer image exists yet with the fixed package; each alert closes by itself when a
-bump to such an image is merged and the scan runs again.
+**Open, waiting for upstream** (169: Uptime Kuma 116, PeaNUT 26, Nginx Proxy Manager 19, Portainer 8). No newer
+image exists yet with the fixed package; each alert closes by itself when a bump to such an image is merged and the
+scan runs again. They're re-checked monthly.
 
 - **OpenSSL** in Nginx Proxy Manager, PeaNUT and Portainer (Debian/Alpine security updates newer than the images'
   builds). Reachable through each service's TLS or HTTP endpoints; the admin UIs stay on the LAN.
