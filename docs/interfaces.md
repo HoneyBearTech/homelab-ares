@@ -17,7 +17,7 @@ setting is required: `docker compose` stops with an error naming any that's miss
 | `NPM_LETSENCRYPT_PATH` | `/srv/appdata/npm/letsencrypt` | Host directory with Nginx Proxy Manager's certificates, their private keys, the ACME account and any DNS-challenge credentials, mounted at `/etc/letsencrypt`. |
 | `PROXY_NETWORK` | `homelab-ares_proxy` | Docker network Nginx Proxy Manager joins. Created once outside the stack (`docker network create`), so its address range survives rebuilding the stack. |
 | `UPTIME_KUMA_VOLUME` | `homelab-ares_uptime-kuma` | Docker volume with Uptime Kuma's database, mounted at `/app/data`. |
-| `PEANUT_CONFIG_PATH` | `/srv/appdata/peanut` | Host directory with PeaNUT's settings (including the NUT server's address and login), mounted at `/config`. |
+| `PEANUT_CONFIG_PATH` | `/srv/appdata/peanut` | Host directory with PeaNUT's settings (including the NUT server's address and login) and its own login (`auth.yaml`, a bcrypt hash), mounted at `/config`. Must be writable by uid 1000, which PeaNUT runs as. |
 | `PORTAINER_VOLUME` | `homelab-ares_portainer` | Docker volume with Portainer's database, mounted at `/data`. |
 
 No secret is a setting. To adopt an existing installation, point each setting at the directory, volume or
@@ -38,8 +38,8 @@ Read by the `autoheal` service (template: [`autoheal.env.example`](../autoheal.e
 | --- | --- | --- | --- |
 | `npm` | `jc21/nginx-proxy-manager` | 80 → 80, 443 → 443 | Proxied HTTP and HTTPS |
 | | | 81 → 81 | Admin UI (LAN only) |
-| `uptime-kuma` | `louislam/uptime-kuma` | 3001 → 3001 | Web UI and status pages |
-| `peanut` | `brandawg93/peanut` | 8080 → 8080 | Web UI, API and Prometheus metrics |
+| `uptime-kuma` | `louislam/uptime-kuma` (slim) | 3001 → 3001 | Web UI and status pages; no "Real Browser" monitors (the slim image has no Chromium) |
+| `peanut` | `brandawg93/peanut` | 8080 → 8080 | Web UI, API and Prometheus metrics (`/api/v1/metrics`), behind PeaNUT's login (HTTP Basic auth works for scrapers); `/api/ping` is open |
 | `portainer` | `portainer/portainer-ce` (Alpine variant) | 9443 → 9443 | Web UI (HTTPS) |
 | | | 8000 → 8000 | Tunnel for Edge agents |
 | `autoheal` | `willfarrell/autoheal` | none | Restarts any labelled service whose health check fails |

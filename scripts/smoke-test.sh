@@ -62,7 +62,8 @@ while IFS= read -r line; do
   case $key in
     *_ROOT | *_PATH)
       value=$work/$(echo "$key" | tr 'A-Z_' 'a-z-')
-      mkdir -p "$value"
+      # Writable by any user: some services run as a fixed uid that isn't the caller's (PeaNUT as 1000).
+      mkdir -p "$value" && chmod 0777 "$value"
       ;;
     *_PREFIX) value=${project}_ ;;
     *_VOLUME) value=${project}_$(echo "$key" | tr 'A-Z_' 'a-z-') ;;

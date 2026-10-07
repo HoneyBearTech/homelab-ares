@@ -42,7 +42,8 @@ Each release carries a CycloneDX SBOM listing every service's image and digest
   (CI with the Compose policy check and the smoke test, CodeQL, dependency review). Nothing skips a check, and
   a failing update stays open for the maintainer.
 - **Major updates are merged by hand**, after reading the service's release notes: a new major version can
-  migrate its data one way. So is any update Dependabot can't classify as patch, minor or major.
+  migrate its data one way. So is any update Dependabot can't classify as patch, minor or major, and every
+  Portainer update: its server and the agents on the other hosts move together.
 - **A merge doesn't deploy.** The server runs what it last pulled; updates reach it when the operator pulls
   and redeploys, with a backup first ([upgrading.md](upgrading.md)).
 - **Dependency review** ([`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml))
@@ -72,12 +73,40 @@ finding is triaged within 14 days:
 
 ### Current findings
 
-None triaged yet: the first scan runs when `compose.yaml` reaches `main`, and its triage is recorded here.
+Triaged 7 October 2026, after the first image scan: 2,525 alerts, every one HIGH or CRITICAL with a fixed package
+version somewhere upstream (Uptime Kuma 1,880, Nginx Proxy Manager 503, PeaNUT 75, Portainer 60, autoheal and
+socket-proxy none).
 
-**Pinned images with a newer release** (Dependabot proposes the bumps): Nginx Proxy Manager 2.15.1 (2.16.0
-available), PeaNUT 5.10.0 (6.0.0, a major version, waits for the maintainer), Portainer 2.39.3 (2.45.1). The first
-pins are the versions the server runs, so the stack can be adopted without changing them; Uptime Kuma is pinned to
-the current stable release (2.5.5).
+**Fixed by a bump or a leaner image** (counts from the same scan of each image, `linux/arm64`):
+
+| Image | Before | After | Change |
+| --- | --- | --- | --- |
+| Uptime Kuma | 2.5.5: 1,890 | 2.5.5-slim: 146 | The full image bundles Chromium (1,670 alerts by itself) for "Real Browser" monitors and an embedded MariaDB; this installation uses neither (its database is SQLite) |
+| Nginx Proxy Manager | 2.15.1: 503 | 2.16.0: 92 | Rebuilt on newer Debian packages and Node modules |
+| PeaNUT | 5.10.0: 87 | 6.0.0: 26 | Fixes three critical issues in its web framework (Next.js); 6.0 also puts its web UI and API behind a login ([interfaces.md](interfaces.md#settings)) |
+| Portainer | 2.39.3: 60 | 2.39.8: 8 | A patch release on the same long-term-support line, so the agents on other hosts stay compatible |
+
+**Not reachable in this stack** (dismissed in code scanning with this reason once the scan of the new images runs):
+
+| Image | Package | Why it can't be reached |
+| --- | --- | --- |
+| Nginx Proxy Manager | `linux-libc-dev` | Kernel header files for compiling; nothing in the image executes them, and containers run on the host's kernel |
+| Nginx Proxy Manager | the npm CLI's own modules under `/usr/lib/node_modules` (`brace-expansion`, `pacote`, `sigstore`, …) | The npm command line is only used to build the image; it never runs in the container |
+| Uptime Kuma | Go standard library in `extra/healthcheck` | The health-check binary only sends one HTTP request to Uptime Kuma inside the container |
+
+**Open, waiting for upstream.** No newer image exists yet with the fixed package; each alert closes by itself when a
+bump to such an image is merged and the scan runs again.
+
+- **OpenSSL** in Nginx Proxy Manager, PeaNUT and Portainer (Debian/Alpine security updates newer than the images'
+  builds). Reachable through each service's TLS or HTTP endpoints; the admin UIs stay on the LAN.
+- **Node.js modules** in Nginx Proxy Manager's admin API (among them `proxy-addr`, one critical) and PeaNUT's web UI
+  (Next.js 16.2.4, two critical). Reachable only through the admin port 81 and PeaNUT's port 8080, which stay on the
+  LAN; PeaNUT's are behind its login.
+- **Uptime Kuma's remaining Debian packages** (Perl, GnuTLS, Expat, Python) and `cloudflared` (used only for a
+  Cloudflare Tunnel, if one is configured in Uptime Kuma).
+- **Portainer's Go modules** (`buildkit`, `docker/cli`, `grpc`): Portainer's UI and API stay on the LAN behind its
+  login. Portainer is updated by hand together with its agents, so newer releases (2.45.x) are a planned change, not
+  an automatic one.
 
 **autoheal** (`willfarrell/autoheal`): its only maintained tag is `latest` (its versioned tags stop at 1.2.0 from
 2021), so it is pinned as `latest@sha256:…` with a policy exception; if Dependabot doesn't propose new digests for

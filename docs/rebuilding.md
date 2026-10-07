@@ -47,6 +47,7 @@ data directories as your user and the proxy's network:
 
 ```sh
 . ./.env && mkdir -p "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH"
+sudo chown 1000:1000 "$PEANUT_CONFIG_PATH"   # PeaNUT runs as uid 1000
 docker network create "$PROXY_NETWORK"
 docker compose config --quiet && docker compose pull
 ```

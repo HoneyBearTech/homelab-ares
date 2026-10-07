@@ -6,10 +6,17 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Upgrading
+
+- Uptime Kuma's slim image has no Chromium: change any "Real Browser" monitor to another type before upgrading.
+- PeaNUT 6 runs as uid 1000 (`chown 1000:1000` its settings directory), puts its web UI and API behind a login it
+  asks for on first start, and its metrics then need that login (HTTP Basic auth works for Prometheus).
+- Portainer updates are no longer merged automatically: the server and its agents are updated together.
+
 ### Added
 
-- `compose.yaml` with 6 services: Nginx Proxy Manager 2.15.1, Uptime Kuma 2.5.5, PeaNUT 5.10.0 and Portainer CE
-  2.39.3 (Alpine variant), each pinned by version tag and digest for `linux/arm64`, plus autoheal and
+- `compose.yaml` with 6 services: Nginx Proxy Manager 2.16.0, Uptime Kuma 2.5.5 (slim), PeaNUT 6.0.0 and
+  Portainer CE 2.39.8 (Alpine variant), each pinned by version tag and digest for `linux/arm64`, plus autoheal and
   socket-proxy. Data paths, volumes and the proxy's network come from settings (`NPM_DATA_PATH`,
   `NPM_LETSENCRYPT_PATH`, `PROXY_NETWORK`, `UPTIME_KUMA_VOLUME`, `PEANUT_CONFIG_PATH`, `PORTAINER_VOLUME`), so an
   existing installation's data can be adopted; the proxy's network is created outside the stack, so its address
@@ -40,5 +47,12 @@ All notable changes to homelab-ares are documented here. The format follows
   once every required check passes, major updates wait for the maintainer.
 - A release workflow that publishes a source archive, the SBOM, `SHA256SUMS` signed keylessly with cosign,
   and SLSA build provenance ([docs/verifying-releases.md](docs/verifying-releases.md)).
+
+### Security
+
+- Triage of the first image scan (2,525 HIGH and CRITICAL alerts with a fix upstream): Uptime Kuma moves to the
+  slim image, without Chromium and the embedded MariaDB (1,890 → 146 alerts); Nginx Proxy Manager 2.16.0 (503 → 92);
+  PeaNUT 6.0.0 (87 → 26, three critical issues in its web framework fixed); Portainer 2.39.8 (60 → 8). What's left,
+  and why: [docs/dependencies.md](docs/dependencies.md#current-findings).
 
 [Unreleased]: https://github.com/HoneyBearTech/homelab-ares/commits/main

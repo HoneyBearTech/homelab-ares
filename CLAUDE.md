@@ -40,8 +40,9 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
 ## Rules for the stack
 - **Every image is pinned as `name:tag@sha256:<digest>`.** Never `latest`, never tag-only. Dependabot
   (`docker-compose` ecosystem) updates tag and digest together. Patch and minor updates are auto-merged once
-  the required checks pass (`dependabot-auto-merge.yml`); major updates wait for the owner. A merge never
-  deploys: Ares changes only on a deliberate pull.
+  the required checks pass (`dependabot-auto-merge.yml`); major updates wait for the owner, and so does every
+  Portainer update (server and agents move together; owner's decision 2026-10-07). A merge never deploys: Ares
+  changes only on a deliberate pull.
 - **Arm64.** Ares is arm64: every image must publish `linux/arm64`. The smoke test runs on an arm64 runner and
   the image scan scans `linux/arm64`.
 - **No privileged containers, added capabilities, host network/PID or Docker socket mounts** unless the

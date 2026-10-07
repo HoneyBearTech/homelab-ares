@@ -24,7 +24,7 @@ x-healthcheck: &healthcheck
 services:
   npm:
     <<: *defaults
-    image: jc21/nginx-proxy-manager:2.15.1@sha256:52b2c59994f3d36acfcf70a1626f29734df0ed8c71bacc0269f78b6f939858bb
+    image: jc21/nginx-proxy-manager:2.16.0@sha256:4393e642e233e5efd5adeb7f10918d4aaea71c9ed875b94190273fc8e87f9594
     container_name: nginxproxymanager
     labels:
       autoheal: "true"
@@ -43,7 +43,9 @@ services:
 
   uptime-kuma:
     <<: *defaults
-    image: louislam/uptime-kuma:2.5.5@sha256:c74379ac4509ce2d2c2633f509e67003ee2e45b6e995c5e43fc101f45a0e1fbe
+    # The slim image: without the bundled Chromium (no "Real Browser" monitors) and embedded MariaDB (the database
+    # is SQLite), which carried almost all of the image's known vulnerabilities.
+    image: louislam/uptime-kuma:2.5.5-slim@sha256:9c56a772a7df53f444a404c579e87a27bd0c201375d00d6745a75bf8138f4342
     container_name: uptime-kuma
     labels:
       autoheal: "true"
@@ -57,7 +59,9 @@ services:
 
   peanut:
     <<: *defaults
-    image: brandawg93/peanut:5.10.0@sha256:8979780e39a9ec68135d34b9852271f3ec2d681977d2871fad6ccb48ffcaf35c
+    # Runs as uid 1000 and keeps its login in /config/auth.yaml, so PEANUT_CONFIG_PATH must be writable by uid 1000.
+    # Its API, metrics included, needs that login (HTTP Basic auth works for scrapers); /api/ping stays open.
+    image: brandawg93/peanut:6.0.0@sha256:6629dce915da8b313f08b2e73dd2e54b60e7c0f642c21a8ebc37fe0a820bf41e
     container_name: PeaNUT
     labels:
       autoheal: "true"
@@ -67,13 +71,14 @@ services:
       - ${PEANUT_CONFIG_PATH:?set PEANUT_CONFIG_PATH in .env}:/config
     healthcheck:
       <<: *healthcheck
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/api/ping"]
+      # The image has no shell or wget; it ships this check (it calls /api/ping).
+      test: ["CMD", "node", "healthcheck.mjs"]
 
   portainer:
     <<: *defaults
-    # The Alpine variant of the same release: it has a shell and wget for the health check (the default image
-    # has neither).
-    image: portainer/portainer-ce:2.39.3-alpine@sha256:90ae993781c08a4dcd1f96c6547a072bb3f90b7ebd5e082d071ef1ad8a341373
+    # The Alpine variant of the LTS release: it has a shell and wget for the health check (the default image has
+    # neither). Updated by hand, together with the Portainer agents on the other hosts (not auto-merged).
+    image: portainer/portainer-ce:2.39.8-alpine@sha256:a0d04c9826efe13402e561589cbdf532d669671f62e40cc02dcd0b5211e4a9a5
     container_name: portainer
     labels:
       autoheal: "true"
