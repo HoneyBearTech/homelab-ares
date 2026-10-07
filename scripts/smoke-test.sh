@@ -48,6 +48,8 @@ cleanup() {
   docker volume ls -q --filter "label=com.docker.compose.project=$project" |
     xargs -r docker volume rm >/dev/null || true
   for network in "${networks[@]+"${networks[@]}"}"; do docker network rm "$network" >/dev/null || true; done
+  # Services that run as root leave root-owned files in the throwaway directories; remove them as root too.
+  docker run --rm --network none -v "$work:/work" "$busybox" find /work -mindepth 1 -delete </dev/null || true
   rm -rf "$work"
   exit "$status"
 }
