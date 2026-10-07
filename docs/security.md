@@ -72,5 +72,6 @@ non-empty reason:
 | DNS provider API token (DNS challenge, if used) | Nginx Proxy Manager's data | same |
 | Notification tokens (chat webhooks, mail) | Uptime Kuma's database | same |
 | NUT server login | PeaNUT's settings | same |
+| PeaNUT's own login (bcrypt hash) | PeaNUT's `auth.yaml` in `PEANUT_CONFIG_PATH` | same |
 | autoheal's webhook URL | `autoheal.env` (mode `600`, gitignored) | same |
 | Backups of the data | off the host, mode `600` | anywhere public |

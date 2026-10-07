@@ -13,6 +13,7 @@ The [quick start](quick-start.md) is the short version of this page.
   challenge, from the internet on port 80).
 - Little disk: the services' data is small, but Nginx Proxy Manager's logs grow; watch the free space on small
   boards.
+- `PEANUT_CONFIG_PATH` owned by (or writable for) uid 1000: PeaNUT runs as that user and saves its login there.
 
 ## Where data lives
 
@@ -48,6 +49,9 @@ the stack at their existing data instead of starting empty:
 - Back up the old data first, then stop and remove the old containers (the names must be free) and start the
   stack. Be especially careful with the proxy: while it's down, every service behind it is unreachable.
 - A newer image may migrate a service's data on its first start and can't go back; the backup is the way back.
+- **Uptime Kuma** runs the slim image, without Chromium: change any "Real Browser" monitor to an HTTP monitor first.
+- **PeaNUT 6** asks for a login on first start if its settings have none yet, and its metrics then need that login:
+  update whatever scrapes them. Change the owner of its settings directory to uid 1000 first.
 
 Running `main` instead of a release is possible but unsupported for anything you depend on.
 

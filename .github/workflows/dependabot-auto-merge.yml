@@ -30,10 +30,12 @@ jobs:
       # Images, Python tools and Actions: patch and minor updates. Major updates (and any update Dependabot can't
       # classify, such as a tag scheme it doesn't read as a version) wait for the maintainer: a new major app
       # version can migrate its database one way.
+      # Portainer is excluded: its server and the agents on the other hosts are updated together, by hand.
       - name: Enable auto-merge for patch and minor updates
         if: >-
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor') &&
+          !contains(steps.metadata.outputs.dependency-names, 'portainer/portainer-ce')
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}

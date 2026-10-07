@@ -28,6 +28,7 @@ proxy.
 
    ```sh
    . ./.env && mkdir -p "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH"
+   sudo chown 1000:1000 "$PEANUT_CONFIG_PATH"   # PeaNUT runs as uid 1000 (skip if that's your user)
    docker network create "$PROXY_NETWORK"
    ```
 
@@ -41,7 +42,8 @@ proxy.
 
 5. **Finish each service's setup in its web UI** (ports in [interfaces.md](interfaces.md#services-and-ports)),
    starting with its admin login: Nginx Proxy Manager (admin port 81) asks you to change its default login on
-   first sign-in, Uptime Kuma and Portainer ask you to create one (Portainer only for the first few minutes after
-   it starts). Point PeaNUT at your NUT server in its settings.
+   first sign-in, Uptime Kuma, PeaNUT and Portainer ask you to create one (Portainer only for the first few minutes
+   after it starts). Point PeaNUT at your NUT server in its settings. If a monitoring system scrapes PeaNUT's
+   metrics, give it PeaNUT's login (HTTP Basic auth).
 
 To upgrade later, follow [upgrading.md](upgrading.md); it starts with a backup.
