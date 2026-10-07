@@ -1,8 +1,5 @@
 # Verifying releases
 
-> **Planned:** there is no release yet; the first one (0.1.0) comes before the server switches over ([roadmap](roadmap.md)). The
-> release workflow is in place, and this is how its releases will be verified.
-
 Every homelab-ares release is published by the [`release.yml`](../.github/workflows/release.yml) workflow
 when a version tag is pushed. homelab-ares builds no images: a release is a version of the Compose file
 with every image pinned by digest. You can check that what you run came from that workflow, unchanged:
