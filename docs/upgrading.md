@@ -5,9 +5,6 @@ migrate their database when they start a new version and can't go back afterward
 with a backup**. The same steps apply to updating a checkout of `main`, which is possible but unsupported for
 anything you depend on.
 
-> **Planned:** there are no releases yet and no `compose.yaml`. The backup and restore scripts exist and are
-> tested against a stand-in stack; they run in CI against the real one once it's added.
-
 ## Before you upgrade
 
 1. Read the release notes (the `CHANGELOG.md` section) for every release between yours and the new one, and
@@ -20,7 +17,7 @@ anything you depend on.
 The state worth keeping is each service's data: every read-write volume or directory it mounts (the proxy's
 settings and certificates, Uptime Kuma's database, PeaNUT's settings, Portainer's database). `scripts/backup.sh`
 stops the stack so the databases are consistent, archives each of those mounts, copies `.env` and any
-`<service>.env`, and starts again whatever was running:
+`<service>.env` (such as `autoheal.env`), and starts again whatever was running:
 
 ```sh
 scripts/backup.sh                       # into backups/<date>-<time>/ in the checkout (gitignored)

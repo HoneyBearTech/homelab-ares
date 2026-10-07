@@ -21,5 +21,4 @@ Project policies live at the top of the repository: [CONTRIBUTING.md](../CONTRIB
 [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) and [CHANGELOG.md](../CHANGELOG.md).
 
 These documents change in the same pull request as the behaviour they describe. Anything not built yet is
-marked **Planned**; for now that includes the stack itself (`compose.yaml`) and everything that runs it. If you
-find a document that's wrong, please [open an issue](https://github.com/HoneyBearTech/homelab-ares/issues): it's treated as a bug.
+marked **Planned**. If you find a document that's wrong, please [open an issue](https://github.com/HoneyBearTech/homelab-ares/issues): it's treated as a bug.

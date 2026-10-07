@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Smoke test of the stack: start every service in compose.yaml with throwaway settings, wait until each one reports
 # healthy, then mark every data mount, take a backup, change the data, restore the backup and check that the data
-# and health came back, and remove everything it created. CI runs it on every change; `make smoke` runs it locally.
+# and health came back, make a test container unhealthy and check that autoheal restarts it (when the stack has
+# autoheal), and remove everything it created. CI runs it on every change; `make smoke` runs it locally.
 # Without a compose.yaml there is nothing to test, and it says so and passes.
 #
 # It stays away from any real installation on the same Docker host: its own Compose project, settings from
-# .env.example with every directory (*_ROOT, *_PATH) moved into a temporary directory and every name prefix
-# (*_PREFIX) set to the project's, no fixed container names, no published ports and no service env files. It never
-# reads .env, ignores the stack's settings in the environment, and on exit removes only the volumes Compose
-# labelled with its own project.
+# .env.example with every directory (*_ROOT, *_PATH) moved into a temporary directory, every volume and network
+# name (*_VOLUME, *_NETWORK) and name prefix (*_PREFIX) replaced by one of its own, no fixed container names, no
+# published ports and no service env files. It never reads .env, ignores the stack's settings in the environment,
+# and on exit removes only the volumes Compose labelled with its own project and the networks it created.
 set -euo pipefail
 
 project=homelab-ares-smoke
@@ -46,9 +47,11 @@ cleanup() {
   compose down --remove-orphans --timeout 30 || true
   docker volume ls -q --filter "label=com.docker.compose.project=$project" |
     xargs -r docker volume rm >/dev/null || true
+  for network in "${networks[@]+"${networks[@]}"}"; do docker network rm "$network" >/dev/null || true; done
   rm -rf "$work"
   exit "$status"
 }
+networks=()
 trap cleanup EXIT
 
 while IFS= read -r line; do
@@ -60,18 +63,49 @@ while IFS= read -r line; do
       mkdir -p "$value"
       ;;
     *_PREFIX) value=${project}_ ;;
+    *_VOLUME) value=${project}_$(echo "$key" | tr 'A-Z_' 'a-z-') ;;
+    *_NETWORK) value=${project}_$(echo "$key" | tr 'A-Z_' 'a-z-') ;;
     *) value=${line#*=} ;;
   esac
   printf '%s=%s\n' "$key" "$value"
 done <<<"$settings" >"$work/env"
 
+# Networks the stack expects to exist (external ones, named by *_NETWORK settings) are created for the test only.
+while IFS='=' read -r key value; do
+  case $key in
+    *_NETWORK)
+      docker network create "$value" >/dev/null
+      networks+=("$value")
+      ;;
+  esac
+done <"$work/env"
+
 # Project-scoped container names, no published ports and no env files, so the test can't collide with anything
 # already running on the host or read a real secret; the health checks run inside the containers and need neither.
+stack_services=$(COMPOSE_FILE=$root/compose.yaml docker compose config --no-interpolate --services)
+has_autoheal=false
 {
   echo "services:"
-  for service in $(COMPOSE_FILE=$root/compose.yaml docker compose config --no-interpolate --services); do
+  for service in $stack_services; do
     printf '  %s:\n    container_name: !reset null\n    ports: !reset []\n    env_file: !reset []\n' "$service"
+    if [ "$service" = autoheal ]; then has_autoheal=true; fi
   done
+  # A container that turns unhealthy on demand (a file in its tmpfs), for autoheal to restart.
+  if $has_autoheal; then
+    cat <<YAML
+  autoheal-test:
+    image: $busybox
+    command: ["sleep", "infinity"]
+    init: true
+    tmpfs: [/tmp]
+    labels:
+      autoheal: "true"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test ! -e /tmp/unhealthy"]
+      interval: 2s
+      retries: 2
+YAML
+  fi
 } >"$work/override.yaml"
 
 compose config --quiet
@@ -110,28 +144,43 @@ for service in $(compose config --services); do
 done
 if [ ${#targets[@]} -eq 0 ]; then
   echo "No service has a data mount; skipping the backup and restore round trip"
-  exit 0
+else
+  echo "Backup and restore round trip over ${#targets[@]} data mount(s)"
+  for target in "${targets[@]}"; do
+    IFS=$'\t' read -r service mount <<<"$target"
+    put_marker "$(compose ps --quiet "$service")" "$mount" backed-up
+  done
+  "$root/scripts/backup.sh" "$work/backup"
+  [ "$(compose ps --services --status running | wc -l)" -eq "$(compose config --services | wc -l)" ] ||
+    fail "backup.sh didn't start every service again"
+
+  for target in "${targets[@]}"; do
+    IFS=$'\t' read -r service mount <<<"$target"
+    put_marker "$(compose ps --quiet "$service")" "$mount" changed
+  done
+  "$root/scripts/restore.sh" --yes "$work/backup"
+
+  for target in "${targets[@]}"; do
+    IFS=$'\t' read -r service mount <<<"$target"
+    check_marker "$(compose ps --all --quiet "$service")" "$mount" ||
+      fail "$service $mount wasn't restored exactly (marker changed, or a file not in the backup was left)"
+  done
+  compose up --detach --wait --wait-timeout "$timeout"
+  echo "Every data mount was restored, and every service is healthy again"
 fi
 
-echo "Backup and restore round trip over ${#targets[@]} data mount(s)"
-for target in "${targets[@]}"; do
-  IFS=$'\t' read -r service mount <<<"$target"
-  put_marker "$(compose ps --quiet "$service")" "$mount" backed-up
-done
-"$root/scripts/backup.sh" "$work/backup"
-[ "$(compose ps --services --status running | wc -l)" -eq "$(compose config --services | wc -l)" ] ||
-  fail "backup.sh didn't start every service again"
-
-for target in "${targets[@]}"; do
-  IFS=$'\t' read -r service mount <<<"$target"
-  put_marker "$(compose ps --quiet "$service")" "$mount" changed
-done
-"$root/scripts/restore.sh" --yes "$work/backup"
-
-for target in "${targets[@]}"; do
-  IFS=$'\t' read -r service mount <<<"$target"
-  check_marker "$(compose ps --all --quiet "$service")" "$mount" ||
-    fail "$service $mount wasn't restored exactly (marker changed, or a file not in the backup was left)"
-done
-compose up --detach --wait --wait-timeout "$timeout"
-echo "Every data mount was restored, and every service is healthy again"
+if $has_autoheal; then
+  echo "autoheal: making a test container unhealthy"
+  test_id=$(compose ps --quiet autoheal-test)
+  started=$(docker inspect --format '{{.State.StartedAt}}' "$test_id")
+  compose exec -T autoheal-test touch /tmp/unhealthy
+  for _ in $(seq 1 40); do
+    sleep 3
+    [ "$(docker inspect --format '{{.State.StartedAt}}' "$test_id")" = "$started" ] || break
+  done
+  [ "$(docker inspect --format '{{.State.StartedAt}}' "$test_id")" != "$started" ] ||
+    fail "autoheal didn't restart the unhealthy container within 2 minutes"
+  compose logs --no-color autoheal | grep -q "found to be unhealthy" || fail "autoheal didn't log the restart"
+  compose up --detach --wait --wait-timeout 60 autoheal-test
+  echo "autoheal restarted the unhealthy container through socket-proxy, and it's healthy again"
+fi

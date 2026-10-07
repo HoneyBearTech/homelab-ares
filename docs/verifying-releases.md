@@ -1,6 +1,6 @@
 # Verifying releases
 
-> **Planned:** there is no release yet; the first one comes with `compose.yaml` ([roadmap](roadmap.md)). The
+> **Planned:** there is no release yet; the first one (0.1.0) comes before the server switches over ([roadmap](roadmap.md)). The
 > release workflow is in place, and this is how its releases will be verified.
 
 Every homelab-ares release is published by the [`release.yml`](../.github/workflows/release.yml) workflow

@@ -2,9 +2,6 @@
 
 The [quick start](quick-start.md) is the short version of this page.
 
-> **Planned:** `compose.yaml` isn't in the repository yet. The requirements and security advice apply now; the
-> install steps apply once the stack is added.
-
 ## Requirements
 
 - Linux with Docker Engine and the Compose v2 plugin (Docker Engine 25 or later and Compose 2.24 or later, for
@@ -19,29 +16,38 @@ The [quick start](quick-start.md) is the short version of this page.
 
 ## Where data lives
 
-| What | Where on the host | In the container |
+| What | Where on the host (setting) | In the container |
 | --- | --- | --- |
-| Nginx Proxy Manager's settings, proxy hosts and logs | `APPDATA_ROOT/npm/data` | `/data` |
-| Nginx Proxy Manager's certificates and private keys | `APPDATA_ROOT/npm/letsencrypt` | `/etc/letsencrypt` |
-| Uptime Kuma's database | `APPDATA_ROOT/uptime-kuma` | `/app/data` |
-| PeaNUT's settings (NUT server address and login) | `APPDATA_ROOT/peanut` | `/config` |
-| Portainer's database | `APPDATA_ROOT/portainer` | `/data` |
+| Nginx Proxy Manager's settings, proxy hosts and logs | directory `NPM_DATA_PATH` | `/data` |
+| Nginx Proxy Manager's certificates and private keys | directory `NPM_LETSENCRYPT_PATH` | `/etc/letsencrypt` |
+| Uptime Kuma's database | volume `UPTIME_KUMA_VOLUME` | `/app/data` |
+| PeaNUT's settings (NUT server address and login) | directory `PEANUT_CONFIG_PATH` | `/config` |
+| Portainer's database | volume `PORTAINER_VOLUME` | `/data` |
 
-These are **Planned** paths ([interfaces.md](interfaces.md#volumes-and-mounts)).
+Details in [interfaces.md](interfaces.md#volumes-and-mounts).
 
 ## Installing
 
 1. Clone the repository (or download a release's source archive and verify it,
    [verifying-releases.md](verifying-releases.md)).
-2. Create `.env` from `.env.example` (mode `600`) and set every value.
-3. Create `APPDATA_ROOT`, then `docker compose up -d`.
+2. Create `.env` from `.env.example` (mode `600`) and set every value. Optionally create `autoheal.env` from
+   `autoheal.env.example` (mode `600`) with a webhook URL for restart notices.
+3. Create the data directories and the proxy's network (`docker network create "$PROXY_NETWORK"`), then
+   `docker compose up -d --wait`.
 
-**Adopting existing containers.** If the services already run on the host (from Portainer stacks or another
-Compose project), point the stack at their existing data instead of starting empty: stop the old containers,
-make sure each data directory or volume is where [interfaces.md](interfaces.md#volumes-and-mounts) expects it
-(or set `APPDATA_ROOT` accordingly), and keep the same published ports, so nothing that reaches them has to
-change. Take a backup of the old data first. Be especially careful with the proxy: while it's down, every
-service behind it is unreachable.
+### Adopting existing containers
+
+If the services already run on the host (from Portainer stacks, `docker run` or other Compose projects), point
+the stack at their existing data instead of starting empty:
+
+- Set each `*_PATH` to the directory the old container mounts, each `*_VOLUME` to the volume it uses
+  (`docker inspect <container>` lists both), and `PROXY_NETWORK` to the network the old proxy is on. Keeping the
+  proxy's network keeps its address range, which access lists may rely on. Docker Compose warns that the volumes
+  "already exist but were not created by Docker Compose"; that's expected.
+- The published ports and container names are the services' usual ones; anything that reaches them keeps working.
+- Back up the old data first, then stop and remove the old containers (the names must be free) and start the
+  stack. Be especially careful with the proxy: while it's down, every service behind it is unreachable.
+- A newer image may migrate a service's data on its first start and can't go back; the backup is the way back.
 
 Running `main` instead of a release is possible but unsupported for anything you depend on.
 
@@ -59,7 +65,10 @@ Running `main` instead of a release is possible but unsupported for anything you
 - **Proxy access lists.** Use Nginx Proxy Manager's access lists to keep LAN-only services LAN-only, even though
   they have a public name.
 - Keep `.env` at mode `600`; it holds no secrets by design, but it describes your host.
-- Back up `APPDATA_ROOT`: it holds the certificates' private keys and every login
+- Keep `autoheal.env` at mode `600`: it holds the webhook URL.
+- autoheal never gets the Docker socket: it goes through `socket-proxy`, which only lets it list, inspect,
+  restart and stop containers, on an internal network.
+- Back up the services' data (`scripts/backup.sh`): it holds the certificates' private keys and every login
   ([upgrading.md](upgrading.md#backing-up)).
 - Don't add services that mount the Docker socket, run privileged or use the host network without a documented
   reason; the policy check refuses them ([security.md](security.md)).
@@ -72,5 +81,6 @@ Running `main` instead of a release is possible but unsupported for anything you
 docker compose down          # stops and removes the containers and the stack's network
 ```
 
-`APPDATA_ROOT` and any named volumes are left untouched. Remove them by hand if you no longer want the services'
-data; note that it contains private keys and passwords.
+The data directories, the volumes and the proxy's network are left untouched. Remove them by hand
+(`docker volume rm`, `docker network rm`) if you no longer want the services' data; note that it contains private
+keys and passwords.

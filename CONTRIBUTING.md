@@ -26,11 +26,8 @@ make test     # creates .venv with the hash-pinned tools, runs the checker's tes
 make lint     # ruff, ruff format, yamllint, shellcheck
 cp .env.example .env && make check   # the policy check over the resolved Compose file
 make smoke    # starts the whole stack with throwaway settings, waits until every service is healthy,
-              # then backs it up, changes it, restores it and checks the result
+              # then backs it up, changes it, restores it, and checks that autoheal restarts an unhealthy container
 ```
-
-**Planned:** `compose.yaml` doesn't exist yet ([roadmap](docs/roadmap.md)). Until it does, `make check` has
-nothing to check and `make smoke` passes with a notice; the linters and the checker's tests already run.
 
 How the stack fits together is in [docs/architecture.md](docs/architecture.md).
 
@@ -42,7 +39,8 @@ the checker's unit tests with a coverage floor, `docker compose config` and the 
 ([`scripts/check_compose.py`](scripts/check_compose.py)). "Stack smoke test"
 ([`scripts/smoke-test.sh`](scripts/smoke-test.sh)), on an arm64 runner like the server, starts every
 service with throwaway directories and volumes, fails unless each one reports healthy within five minutes,
-and then runs a backup and restore round trip over every data mount. CodeQL, dependency review, a DCO check and OpenSSF
+runs a backup and restore round trip over every data mount, and checks that autoheal restarts a container that
+turns unhealthy. CodeQL, dependency review, a DCO check and OpenSSF
 Scorecard also run on the repository.
 
 The checker's tests are offline: they feed it JSON fixtures in [`tests/fixtures/`](tests/fixtures/), with no

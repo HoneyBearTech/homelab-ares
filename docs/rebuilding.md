@@ -3,8 +3,8 @@
 How to bring the stack back on a new or wiped machine from a backup made by `scripts/backup.sh`
 ([upgrading.md](upgrading.md#backing-up)), with every service's settings, certificates and history as they were.
 
-> **Planned:** this needs `compose.yaml`, which isn't in the repository yet. The backup and restore scripts
-> exist; the rebuild is rehearsed once the stack is in place.
+The backup and restore scripts run end to end in CI on every change (the smoke test backs up the running stack,
+changes it, restores it and checks the result).
 
 You need: the backup directory (copied off the old host) and this repository.
 
@@ -41,13 +41,18 @@ git checkout vX.Y.Z      # the release the backup was taken with, or newer; veri
 cp /path/to/backup/env/.env .env && chmod 600 .env
 ```
 
-Copy any `<service>.env` from the backup's `env/` the same way (mode `600`). Edit `.env` if the new host's
-paths differ, and create `APPDATA_ROOT` as your user:
+Copy any `<service>.env` from the backup's `env/` (such as `autoheal.env`) the same way (mode `600`). Edit `.env`
+if the new host's paths differ; keep the volume names, since the restore creates volumes under them. Create the
+data directories as your user and the proxy's network:
 
 ```sh
-. ./.env && mkdir -p "$APPDATA_ROOT"
+. ./.env && mkdir -p "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH"
+docker network create "$PROXY_NETWORK"
 docker compose config --quiet && docker compose pull
 ```
+
+The network gets a new address range; if the proxy's access lists allow its gateway address, update them after
+the restore.
 
 ## 4. Restore and start
 

@@ -6,9 +6,6 @@ management UI. Ares is a small bare-metal arm64 machine (Debian 13), so it keeps
 hosts don't. The repository holds configuration, not application code: the services run from their upstream
 images, pinned by digest.
 
-> **Planned:** `compose.yaml` isn't in the repository yet. This page describes the stack it will define; the
-> services run today from an older, hand-managed setup on the host and move over in one planned cutover.
-
 ## Services
 
 | Service | Image source | Role |
@@ -16,7 +13,11 @@ images, pinned by digest.
 | Nginx Proxy Manager | the project's own image | Reverse proxy for the homelab's web services: one HTTPS name per service, TLS certificates (Let's Encrypt), access lists |
 | Uptime Kuma | the project's own image | Uptime checks of hosts and services, with notifications and status pages |
 | PeaNUT | the project's own image | Dashboard for the UPS, read from a NUT server on the network; also exposes the UPS readings as Prometheus metrics |
-| Portainer (server) | the project's own image (Community Edition) | Web UI for the Docker hosts in the homelab: Ares itself through the Docker socket, the others through the Portainer agent running on each of them |
+| Portainer (server) | the project's own image (Community Edition, Alpine variant) | Web UI for the Docker hosts in the homelab: Ares itself through the Docker socket, the others through the Portainer agent running on each of them |
+| autoheal | the project's own image | Restarts any service whose health check fails, and can post a notice to a webhook (Docker on its own only restarts a container that exits) |
+| socket-proxy | linuxserver.io | Gives autoheal a filtered view of the Docker API (list, inspect, restart and stop containers only) on an internal network |
+
+Every service has a health check, so `docker compose ps` shows a broken one, and autoheal restarts it.
 
 Metrics and logs (Grafana, Prometheus, Loki) also run on Ares, but from their own project and repository; this
 stack doesn't include or manage them.
@@ -43,6 +44,7 @@ clients ──HTTPS──▶ Nginx Proxy Manager ──HTTP(S)──▶ web serv
 Uptime Kuma ──ping / HTTP──▶ hosts and services ──▶ notifications
 PeaNUT ──NUT protocol──▶ NUT server (UPS) ; monitoring ──scrape──▶ PeaNUT metrics
 Portainer ──Docker socket──▶ Docker on Ares ; Portainer ──agent API──▶ Docker on the other hosts
+autoheal ──(internal network)──▶ socket-proxy ──read-only socket, filtered──▶ Docker on Ares (restart unhealthy)
 ```
 
 Each service keeps its settings and database in its own data directory or volume (see
@@ -64,8 +66,8 @@ Nothing on the host updates itself: a version that runs is always a version that
 
 | Path | What |
 | --- | --- |
-| `compose.yaml` | The stack (**Planned**) |
-| `.env.example` | Template for the settings |
+| `compose.yaml` | The stack |
+| `.env.example`, `autoheal.env.example` | Templates for the settings and autoheal's optional webhook |
 | `scripts/check_compose.py` | The policy check and SBOM generator (standard-library Python) |
 | `scripts/backup.sh`, `scripts/restore.sh` | Backup and restore of every service's data |
 | `scripts/smoke-test.sh` | Starts the stack in isolation, waits for health, and round-trips a backup |
