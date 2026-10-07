@@ -9,7 +9,7 @@ file changes with them, in the same pull request.
 - Done: `compose.yaml` with Nginx Proxy Manager, Uptime Kuma, PeaNUT and Portainer, every image pinned by tag and
   digest for `linux/arm64`, a health check for each service, autoheal behind a filtering socket proxy, and the
   smoke test proving health, backup and restore, and autoheal's restarts on arm64 in CI.
-- First release (0.1.0) before Ares switches over, so the server is first deployed from a signed, verified
+- Done: first release (0.1.0) before Ares switches over, so the server is first deployed from a signed, verified
   version.
 - Switch Ares to run the stack from a checkout of this repository, adopting the existing data, ports and
   networks so nothing that reaches the server notices.

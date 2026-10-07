@@ -6,6 +6,11 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-07
+
+The first release: the Ares stack as a Compose file, every image pinned by version tag and digest for
+`linux/arm64`, with health checks, autoheal, backups and release signing around it.
+
 ### Upgrading
 
 - Uptime Kuma's slim image has no Chromium: change any "Real Browser" monitor to another type before upgrading.
@@ -55,4 +60,5 @@ All notable changes to homelab-ares are documented here. The format follows
   PeaNUT 6.0.0 (87 → 26, three critical issues in its web framework fixed); Portainer 2.39.8 (60 → 8). What's left,
   and why: [docs/dependencies.md](docs/dependencies.md#current-findings).
 
-[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/commits/main
+[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.1.0
