@@ -3,9 +3,6 @@
 What homelab-ares is meant to guarantee, what it leaves to the operator and the services, and where secrets
 live. The reasoning behind these requirements is in the [assurance case](assurance-case.md).
 
-> **Planned:** requirements 1 and 2 apply to `compose.yaml`, which isn't in the repository yet; the checker that
-> enforces them already runs in CI and is tested. Requirements 3 to 5 apply now.
-
 ## What homelab-ares protects
 
 1. **Only reviewed versions run.** Every image is pinned as `name:tag@sha256:<digest>`. A registry tag
@@ -54,6 +51,13 @@ non-empty reason:
 - **Portainer's reach.** Portainer's server needs the Docker socket (an allowed exception, labelled in
   `compose.yaml`), so it is root on this host, and it controls every Docker host whose agent is paired with it.
   Its login is the most valuable secret on the server.
+- **autoheal's reach.** autoheal never holds the socket: `socket-proxy` does (the second allowed exception) and
+  passes on only listing, inspecting, restarting and stopping containers, on an internal network with no
+  published port. Whoever controls autoheal or the proxy can still stop any container on the host and read
+  containers' settings, including their environment; this stack keeps no secrets in environment variables.
+- **Restart loops.** autoheal restarts an unhealthy service every few minutes for as long as it stays unhealthy;
+  that keeps a hung service available but can hide a real fault. Restarts are logged (and sent to the webhook if
+  one is set).
 - **The host.** Anyone with root, `docker` group membership or write access to `.env` or the services' data
   controls the stack; those are trusted.
 - **Upstream images' internals.** Some images run as root inside the container; that is the image's design and
@@ -68,4 +72,5 @@ non-empty reason:
 | DNS provider API token (DNS challenge, if used) | Nginx Proxy Manager's data | same |
 | Notification tokens (chat webhooks, mail) | Uptime Kuma's database | same |
 | NUT server login | PeaNUT's settings | same |
+| autoheal's webhook URL | `autoheal.env` (mode `600`, gitignored) | same |
 | Backups of the data | off the host, mode `600` | anywhere public |

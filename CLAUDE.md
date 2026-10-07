@@ -1,9 +1,9 @@
 # homelab-ares
 
 The Docker Compose stack for Ares, the owner's homelab edge and monitoring server (Debian 13, arm64, bare metal):
-Nginx Proxy Manager, Uptime Kuma, PeaNUT and Portainer, every image pinned by tag and digest so the server can be
-upgraded and rebuilt from this repository. **Planned:** `compose.yaml` doesn't exist yet; the services still run
-from their old setup on the host.
+Nginx Proxy Manager, Uptime Kuma, PeaNUT and Portainer, plus autoheal behind a filtering socket proxy, every image
+pinned by tag and digest so the server can be upgraded and rebuilt from this repository. The services still run
+from their old setup on the host until the cutover (plan in Chronos).
 
 ## Before Making Structural Changes
 Read the project's notes first. They live outside this repo, in the owner's Obsidian vault **Chronos** at
@@ -46,9 +46,13 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   the image scan scans `linux/arm64`.
 - **No privileged containers, added capabilities, host network/PID or Docker socket mounts** unless the
   service carries `org.honeybeartech.ares.allow.<rule>: "<reason>"` and the owner agreed.
-  `scripts/check_compose.py` enforces both rules in CI and in the release workflow. Agreed exception (owner,
-  2026-10-07): Portainer's server mounts the Docker socket (`docker-socket`). Don't add more without the owner
-  agreeing.
+  `scripts/check_compose.py` enforces both rules in CI and in the release workflow. Exceptions in use (each agreed
+  by the owner, 2026-10-07): `portainer` (`docker-socket`, read-write: Portainer manages Docker on this host),
+  `socket-proxy` (`docker-socket`, read-only: filters the API down to list/inspect/restart/stop for autoheal,
+  internal network, no port), `autoheal` (`latest`: the image's only maintained tag). Don't add more without the
+  owner agreeing.
+- **Every service has a health check and the `autoheal: "true"` label** (except autoheal itself). autoheal must
+  never get the socket itself, only `tcp://socket-proxy:2375`.
 - **Never change the live server** (Ares) without the owner asking: no `docker compose up`, no edits to
   service data, Portainer stacks or Nginx Proxy Manager's proxy hosts. Ares fronts every other service in the
   homelab, so a mistake there takes everything down. Read-only inspection (`docker ps`, `docker inspect`)
@@ -63,7 +67,9 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   read-write. Keep it that way when adding a service.
 
 ## Stack
-- Docker Compose v2 (`compose.yaml`, planned), upstream images.
+- Docker Compose v2 (`compose.yaml`, 6 services), upstream images. Settings per path/volume/network in `.env`
+  (`*_PATH`, `*_VOLUME`, `PROXY_NETWORK`); the smoke test replaces each kind with throwaway ones, so keep that
+  naming for new settings.
 - `scripts/check_compose.py`: Python 3.14, standard library only. Reads `docker compose config --format json`,
   reports policy violations (exit 1), `--sbom FILE` writes a CycloneDX 1.6 SBOM of the images.
 - `scripts/backup.sh`, `restore.sh`, `smoke-test.sh` (helpers in `lib.sh`): bash, must also run on macOS'

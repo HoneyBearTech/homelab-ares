@@ -13,10 +13,6 @@ Docker Compose stack for Ares, a homelab Debian 13 (arm64) server. Version-pinne
 > control every Docker host it manages. A broken upgrade takes all of them offline, and an upgrade can migrate a
 > service's data irreversibly. Back up before every upgrade ([docs/upgrading.md](docs/upgrading.md)).
 
-> [!NOTE]
-> **Planned:** the stack itself (`compose.yaml`) isn't in the repository yet. The checks, backup scripts,
-> release signing and documentation around it are; sections that depend on the stack say so.
-
 ## Documentation
 
 - [Quick start](docs/quick-start.md): getting the stack running on a fresh Docker host
@@ -35,14 +31,16 @@ Docker Compose stack for Ares, a homelab Debian 13 (arm64) server. Version-pinne
 
 ## What's in the stack
 
-**Planned** ([architecture](docs/architecture.md)):
+([architecture](docs/architecture.md), ports in [interfaces](docs/interfaces.md#services-and-ports)):
 
 - **Nginx Proxy Manager**: the reverse proxy and TLS certificates for the homelab's web services
 - **Uptime Kuma**: uptime checks and status pages
 - **PeaNUT**: a dashboard and metrics endpoint for the UPS, through a NUT server
 - **Portainer**: a web UI for the Docker hosts in the homelab (server; the hosts run its agent)
+- **autoheal**: restarts any of them whose health check fails, through a socket proxy that only lets it list,
+  inspect, restart and stop containers
 
-Every image will be pinned by tag **and** digest, for `linux/arm64`. New versions arrive as Dependabot pull
+Every service has a health check, and every image is pinned by tag **and** digest, for `linux/arm64`. New versions arrive as Dependabot pull
 requests that CI checks and the maintainer merges; nothing on the host updates itself. Metrics dashboards
 (Grafana, Prometheus) are a separate project and not part of this stack.
 
@@ -50,8 +48,10 @@ requests that CI checks and the maintainer merges; nothing on the host updates i
 
 ```sh
 git clone https://github.com/HoneyBearTech/homelab-ares.git && cd homelab-ares
-cp .env.example .env && chmod 600 .env              # then set TZ and APPDATA_ROOT
-docker compose up -d                                # Planned: needs compose.yaml
+cp .env.example .env && chmod 600 .env              # then set TZ, and the paths if you keep data elsewhere
+. ./.env && mkdir -p "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH"
+docker network create "$PROXY_NETWORK"
+docker compose up -d --wait
 ```
 
 The full steps are in the [quick start](docs/quick-start.md).
@@ -69,13 +69,21 @@ Upgrading to a new release: [docs/upgrading.md](docs/upgrading.md).
 
 ## Configuration
 
-Settings come from `.env` (template [`.env.example`](.env.example)), which holds no secrets. **Planned:** the
-list is settled when `compose.yaml` is added.
+Settings come from `.env` (template [`.env.example`](.env.example)), which holds no secrets.
 
 | Setting | Default in `.env.example` | Meaning |
 | --- | --- | --- |
 | `TZ` | `Etc/UTC` | Time zone |
-| `APPDATA_ROOT` | `/srv/appdata` | Host directory for the services' data, one subdirectory each. Holds certificates and logins: back it up |
+| `NPM_DATA_PATH` | `/srv/appdata/npm/data` | Nginx Proxy Manager's settings, proxy hosts and logs |
+| `NPM_LETSENCRYPT_PATH` | `/srv/appdata/npm/letsencrypt` | Nginx Proxy Manager's certificates and private keys |
+| `PROXY_NETWORK` | `homelab-ares_proxy` | The proxy's Docker network, created once outside the stack |
+| `UPTIME_KUMA_VOLUME` | `homelab-ares_uptime-kuma` | Docker volume with Uptime Kuma's database |
+| `PEANUT_CONFIG_PATH` | `/srv/appdata/peanut` | PeaNUT's settings, including the NUT login |
+| `PORTAINER_VOLUME` | `homelab-ares_portainer` | Docker volume with Portainer's database |
+
+All of it holds certificates and logins: back it up (`scripts/backup.sh`). autoheal's optional webhook URL (restart
+notices, for example to Discord) goes in `autoheal.env` (template [`autoheal.env.example`](autoheal.env.example),
+mode `600`, gitignored).
 
 Ports, volumes and labels: [docs/interfaces.md](docs/interfaces.md).
 
@@ -85,7 +93,8 @@ Ports, volumes and labels: [docs/interfaces.md](docs/interfaces.md).
   publish only the proxy's HTTP and HTTPS ports beyond it. Docker-published ports bypass host firewalls such
   as `ufw`.
 - Portainer's server mounts the Docker socket, which is root on the host, and controls every agent that is
-  paired with it: treat its login like a root password.
+  paired with it: treat its login like a root password. autoheal never gets the socket: it goes through a proxy
+  that only lets it list, inspect, restart and stop containers.
 - Secrets (logins, API tokens, TLS private keys, the NUT login) live only in each service's data, never in this
   repository or `.env`. Backups contain them: keep them private and off the host.
 - Don't run an auto-updater such as Watchtower on these containers; upgrade by release instead.

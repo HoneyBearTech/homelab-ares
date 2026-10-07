@@ -1,19 +1,20 @@
 # Assurance case
 
 Why homelab-ares meets its [security requirements](security.md): the threat model, the trust boundaries,
-the secure design principles it follows, and how common weaknesses are countered. Parts that depend on
-`compose.yaml`, which isn't in the repository yet, are marked **Planned**.
+the secure design principles it follows, and how common weaknesses are countered.
 
 ## Threat model
 
 | Asset | Threat | Countered by |
 | --- | --- | --- |
-| The host | A compromised or malicious image | Digest pins; versions change only by reviewed pull request; no privileged, capability, host-namespace or socket access without a reasoned label (**Planned** for the stack; the checker exists) |
+| The host | A compromised or malicious image | Digest pins; versions change only by reviewed pull request; no privileged, capability, host-namespace or socket access without a reasoned label |
 | The host and every agent host | Portainer's login or Portainer itself compromised | Socket access limited to Portainer as a labelled exception; admin UI on the LAN only; strong unique password; updates through Dependabot |
 | The proxied services | Traffic intercepted or a service exposed by mistake | TLS on the proxy; access lists for LAN-only services; admin ports kept off the internet ([installing.md](installing.md#running-it-securely)) |
 | TLS private keys, logins, tokens | Committed to the public repository | Kept in the services' data, never in the repo; `.gitignore`; gitleaks over the history in CI; GitHub push protection |
 | TLS private keys, logins, tokens | Leaked through a backup | `scripts/backup.sh` writes backups readable only by the user who ran it; documented as secret, to be kept off the host |
-| The services' data | An upgrade that migrates and breaks it | `scripts/backup.sh` before every upgrade; rollback = old tag + `scripts/restore.sh`, both exercised by the CI smoke test (**Planned** against the real stack; tested against a stand-in) |
+| The services' data | An upgrade that migrates and breaks it | `scripts/backup.sh` before every upgrade; rollback = old tag + `scripts/restore.sh`, both exercised by the CI smoke test |
+| The host | A container breaking out through the Docker socket | The `docker-socket` rule; only Portainer and socket-proxy mount it, as labelled exceptions; autoheal reaches Docker only through socket-proxy, which allows listing, inspecting, restarting and stopping containers, on an internal network |
+| Availability | A service hangs without exiting | A health check on every service; autoheal restarts an unhealthy one (and can notify a webhook); a long start period keeps it from interrupting a migration |
 | The services' data | A crafted backup writing outside the services' data | `restore.sh` verifies `SHA256SUMS` (which covers the `MANIFEST`), accepts only plain archive names and absolute container paths without `..`, refuses the Docker socket, and writes only a mount the service has read-write |
 | The release | Tampered release files | Keyless-signed `SHA256SUMS`, SLSA provenance, signed tags |
 | The CI pipeline | Untrusted pull request input running with credentials | `pull_request` only, read-only token by default, untrusted values only via `env:`, actions pinned by SHA |
@@ -31,8 +32,9 @@ who already has root or `docker` group access on the host, or write access to `.
 3. **Internet → proxy.** Only ports 80 and 443 are meant to be reachable from outside; everything behind them is
    configured per proxy host, with TLS and access lists.
 4. **LAN → admin UIs.** Each admin UI is behind the service's own login and isn't published beyond the LAN.
-5. **Containers → host.** Only each service's data directory or volume is mounted; no host namespaces. The one
-   socket mount (Portainer) is a reviewed, labelled exception (**Planned**).
+5. **Containers → host.** Only each service's data directory or volume is mounted; no host namespaces. The two
+   socket mounts (Portainer; socket-proxy, which autoheal reaches only on an internal network) are reviewed,
+   labelled exceptions.
 6. **Ares → other Docker hosts.** Portainer's agents obey only their paired server; that pairing makes this
    server's Portainer the key to every agent host.
 7. **Pull requests → CI.** Fork pull requests get a read-only token and no secrets.
@@ -65,9 +67,9 @@ who already has root or `docker` group access on the host, or write access to `.
 ## Evidence
 
 - CI on every change: ruff (with the bandit rules), yamllint, actionlint, gitleaks over the history,
-  shellcheck, pytest with a 90 % branch-coverage floor; once `compose.yaml` exists, `docker compose config`, the
-  policy check, and a smoke test on arm64 that starts every pinned image, waits for its health check and
-  round-trips a backup and restore (a dynamic test of the stack and the scripts).
+  shellcheck, pytest with a 90 % branch-coverage floor, `docker compose config`, the policy check, and a smoke
+  test on arm64 that starts every pinned image, waits for its health check, round-trips a backup and restore and
+  proves that autoheal restarts an unhealthy container (a dynamic test of the stack and the scripts).
 - A weekly Trivy scan of every pinned image, and on every change to `compose.yaml`, into code scanning.
 - CodeQL (Python and Actions) on every pull request and weekly; OpenSSF Scorecard weekly; dependency
   review on every pull request.

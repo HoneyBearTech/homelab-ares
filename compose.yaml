@@ -1,0 +1,178 @@
+# The Ares stack: Nginx Proxy Manager, Uptime Kuma, PeaNUT and Portainer, plus autoheal (behind a filtering socket
+# proxy) to restart any of them that turns unhealthy. Every setting comes from .env (template: .env.example;
+# reference: docs/interfaces.md); the one secret, autoheal's optional webhook, from autoheal.env (template:
+# autoheal.env.example). Every image is pinned as name:tag@sha256:<digest> and publishes linux/arm64; Dependabot
+# proposes updates. scripts/check_compose.py enforces the policy (docs/security.md#policy).
+name: homelab-ares
+
+x-defaults: &defaults
+  restart: unless-stopped
+  environment:
+    TZ: ${TZ:?set TZ in .env}
+
+# Health check timing shared by every service; each service adds its own test. During start_period a failing check
+# doesn't count, and Docker checks every start_interval, so a healthy service shows up within seconds. The long
+# start_period keeps autoheal from restarting a service in the middle of a slow database migration after an upgrade
+# (start_interval needs Docker Engine 25 and Compose 2.24).
+x-healthcheck: &healthcheck
+  interval: 1m
+  timeout: 10s
+  retries: 3
+  start_period: 10m
+  start_interval: 5s
+
+services:
+  npm:
+    <<: *defaults
+    image: jc21/nginx-proxy-manager:2.15.1@sha256:52b2c59994f3d36acfcf70a1626f29734df0ed8c71bacc0269f78b6f939858bb
+    container_name: nginxproxymanager
+    labels:
+      autoheal: "true"
+    ports:
+      - "80:80" # proxied HTTP (and Let's Encrypt's HTTP challenge)
+      - "443:443" # proxied HTTPS
+      - "81:81" # admin UI: keep it on the LAN
+    volumes:
+      - ${NPM_DATA_PATH:?set NPM_DATA_PATH in .env}:/data
+      - ${NPM_LETSENCRYPT_PATH:?set NPM_LETSENCRYPT_PATH in .env}:/etc/letsencrypt
+    networks:
+      - proxy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "/usr/bin/check-health"]
+
+  uptime-kuma:
+    <<: *defaults
+    image: louislam/uptime-kuma:2.5.5@sha256:c74379ac4509ce2d2c2633f509e67003ee2e45b6e995c5e43fc101f45a0e1fbe
+    container_name: uptime-kuma
+    labels:
+      autoheal: "true"
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma:/app/data
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "extra/healthcheck"]
+
+  peanut:
+    <<: *defaults
+    image: brandawg93/peanut:5.10.0@sha256:8979780e39a9ec68135d34b9852271f3ec2d681977d2871fad6ccb48ffcaf35c
+    container_name: PeaNUT
+    labels:
+      autoheal: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${PEANUT_CONFIG_PATH:?set PEANUT_CONFIG_PATH in .env}:/config
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/api/ping"]
+
+  portainer:
+    <<: *defaults
+    # The Alpine variant of the same release: it has a shell and wget for the health check (the default image
+    # has neither).
+    image: portainer/portainer-ce:2.39.3-alpine@sha256:90ae993781c08a4dcd1f96c6547a072bb3f90b7ebd5e082d071ef1ad8a341373
+    container_name: portainer
+    labels:
+      autoheal: "true"
+      org.honeybeartech.ares.allow.docker-socket: >-
+        Portainer's server manages Docker on this host through the socket (agreed by the owner 2026-10-07)
+    ports:
+      - "9443:9443" # web UI (HTTPS): keep it on the LAN
+      - "8000:8000" # tunnel for Edge agents
+    volumes:
+      - portainer:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:9000/api/system/status"]
+
+  # Restarts any container labelled autoheal: "true" that Docker reports unhealthy (Docker itself only restarts a
+  # container whose process exits). It reaches Docker only through socket-proxy, which lets it list, inspect,
+  # restart and stop containers and nothing else. Optional restart notices go to a webhook from autoheal.env.
+  autoheal:
+    image: willfarrell/autoheal:latest@sha256:e7f42d5365c7c4490dd0cafc2858bb9fd2d64a274448d2de2bb5c386f1af7a0f
+    container_name: autoheal
+    restart: unless-stopped
+    # autoheal exits if it can't reach the proxy, so it starts only once the proxy answers. (After a host reboot
+    # Docker starts both at once; autoheal then restarts until the proxy is up, a few seconds.)
+    depends_on:
+      socket-proxy:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      start_period: 1m
+      test: ["CMD", "pgrep", "-f", "autoheal"]
+    labels:
+      org.honeybeartech.ares.allow.latest: >-
+        The image publishes "latest" (rebuilt regularly) and versioned tags only up to 1.2.0 from 2021, so the
+        maintained image is "latest", pinned by digest.
+    environment:
+      TZ: ${TZ:?set TZ in .env}
+      DOCKER_SOCK: tcp://socket-proxy:2375
+      AUTOHEAL_CONTAINER_LABEL: autoheal
+      AUTOHEAL_INTERVAL: 10
+      # Give a service time to shut down cleanly (and finish database writes) before it's restarted.
+      AUTOHEAL_DEFAULT_STOP_TIMEOUT: 30
+      # Discord's webhook API reads the message from "content".
+      WEBHOOK_JSON_KEY: content
+    env_file:
+      - path: autoheal.env
+        required: false
+    networks:
+      - default
+      - docker-proxy
+
+  # The socket-proxy answers on an internal network with no published port, and passes on only what autoheal needs:
+  # listing and inspecting containers, and restarting or stopping them (CONTAINERS, ALLOW_RESTARTS). Creating,
+  # starting or deleting containers, exec, images, volumes and every other POST are refused.
+  socket-proxy:
+    image: lscr.io/linuxserver/socket-proxy:3.4.6@sha256:362cadf55b3c7920189347d0f4d60b389e2f80e929581bf10793f2371aab41e5
+    container_name: socket-proxy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /run
+      - /tmp
+    healthcheck:
+      <<: *healthcheck
+      start_period: 1m
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:2375/_ping"]
+    labels:
+      autoheal: "true"
+      org.honeybeartech.ares.allow.docker-socket: >-
+        A filtering proxy so that autoheal never gets the socket itself: it allows only listing, inspecting,
+        restarting and stopping containers, on an internal network with no published port. The socket mount is
+        read-only, which protects the socket file but not the API; the proxy's filter is what limits it.
+    environment:
+      TZ: ${TZ:?set TZ in .env}
+      CONTAINERS: 1
+      ALLOW_RESTARTS: 1
+      POST: 0
+      EVENTS: 0
+      PING: 1
+      VERSION: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker-proxy
+
+volumes:
+  # Named so an existing installation's volumes can be adopted; Compose only warns that it didn't create them.
+  uptime-kuma:
+    name: ${UPTIME_KUMA_VOLUME:?set UPTIME_KUMA_VOLUME in .env}
+  portainer:
+    name: ${PORTAINER_VOLUME:?set PORTAINER_VOLUME in .env}
+
+networks:
+  # The proxy's network is created once outside the stack (docs/installing.md), so it keeps its address range
+  # across rebuilds of the stack: access lists can rely on it.
+  proxy:
+    name: ${PROXY_NETWORK:?set PROXY_NETWORK in .env}
+    external: true
+  # socket-proxy's network: internal, so nothing on it can reach the outside world and nothing outside can reach
+  # the proxy; only autoheal joins it.
+  docker-proxy:
+    internal: true

@@ -3,8 +3,7 @@
 How homelab-ares chooses, obtains, tracks and updates what it's built from, and what happens when one of
 those dependencies has a vulnerability.
 
-homelab-ares's dependencies are almost entirely the **container images** it runs (**Planned**: they arrive with
-`compose.yaml`). The rest are the tools its checks and tests use and the GitHub Actions in its workflows. Its
+homelab-ares's dependencies are almost entirely the **container images** it runs. The rest are the tools its checks and tests use and the GitHub Actions in its workflows. Its
 own code, the policy checker, uses only the Python standard library.
 
 ## Choosing a dependency
@@ -22,7 +21,7 @@ A new image or tool must:
 
 | Dependency | Declared in | Pinned by | Fetched by |
 | --- | --- | --- | --- |
-| The stack's images (**Planned**) | `compose.yaml` | version tag and digest | `docker compose pull` |
+| The stack's images | [`compose.yaml`](../compose.yaml) | version tag and digest | `docker compose pull` |
 | Check and test tools (pytest, coverage, ruff, yamllint, shellcheck) | [`requirements-dev.in`](../requirements-dev.in) → [`requirements-dev.txt`](../requirements-dev.txt) | exact version and SHA-256 hashes (`pip-compile --generate-hashes`) | `pip install --require-hashes --no-deps` |
 | Helper image for backups and the smoke test (busybox) | [`scripts/lib.sh`](../scripts/lib.sh) | version tag and digest | Docker |
 | Linters and scanners used only by CI (actionlint, gitleaks, Trivy) | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), [`scan.yml`](../.github/workflows/scan.yml) | version tag and digest | Docker |
@@ -73,8 +72,16 @@ finding is triaged within 14 days:
 
 ### Current findings
 
-None: there are no images in the stack yet. The first scan runs when `compose.yaml` is added, and its triage is
-recorded here.
+None triaged yet: the first scan runs when `compose.yaml` reaches `main`, and its triage is recorded here.
+
+**Pinned images with a newer release** (Dependabot proposes the bumps): Nginx Proxy Manager 2.15.1 (2.16.0
+available), PeaNUT 5.10.0 (6.0.0, a major version, waits for the maintainer), Portainer 2.39.3 (2.45.1). The first
+pins are the versions the server runs, so the stack can be adopted without changing them; Uptime Kuma is pinned to
+the current stable release (2.5.5).
+
+**autoheal** (`willfarrell/autoheal`): its only maintained tag is `latest` (its versioned tags stop at 1.2.0 from
+2021), so it is pinned as `latest@sha256:…` with a policy exception; if Dependabot doesn't propose new digests for
+it, it's bumped by hand with the other hand-pinned images.
 
 ## Licenses
 
