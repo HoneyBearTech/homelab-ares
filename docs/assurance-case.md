@@ -41,8 +41,8 @@ who already has root or `docker` group access on the host, or write access to `.
 
 ## Secure design principles
 
-- **Least privilege**: every capability dropped and only the needed ones added back, no new privileges, no host namespaces, one documented socket mount, read-only CI
-  tokens raised per job.
+- **Least privilege**: every capability dropped and only the needed ones added back, no new privileges, no host
+  namespaces, one documented socket mount, read-only CI tokens raised per job.
 - **Fail-safe defaults**: the policy check fails on anything it doesn't recognise as allowed; an exception
   needs a reason, in the file, in review. `restore.sh` refuses anything in a backup it can't account for.
 - **Complete mediation**: every change to what runs passes through a pull request and the same checks;

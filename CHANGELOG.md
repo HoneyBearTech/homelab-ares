@@ -15,6 +15,13 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Changed
 
+- Each backup also records `NETWORKS`, the address range and gateway of every network the stack uses but doesn't
+  create (the proxy's), and `VERSION`, the checkout's `git describe`, so a rebuilt host can recreate the proxy's
+  network as it was. The smoke test checks both.
+- docs/rebuilding.md: fetching the newest complete backup from the backup server, recreating the proxy's network
+  from `NETWORKS`, what to check after the restore, and how to rehearse a rebuild on a scratch machine without
+  disturbing the live host.
+
 - `scripts/backup.sh` stops one service at a time, only while its own data is archived, instead of the whole stack;
   services with nothing to archive (autoheal, socket-proxy) keep running. The proxy is down for seconds.
 
