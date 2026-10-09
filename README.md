@@ -62,7 +62,7 @@ The full steps are in the [quick start](docs/quick-start.md).
 docker compose ps                 # what's running
 docker compose logs -f <service>  # one service's log
 make check                        # policy check: every image pinned, nothing privileged
-scripts/backup.sh                 # back up every service's data (stops the stack briefly)
+scripts/backup.sh                 # back up every service's data (stops each service briefly)
 ```
 
 Upgrading to a new release: [docs/upgrading.md](docs/upgrading.md).

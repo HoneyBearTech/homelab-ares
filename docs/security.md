@@ -21,7 +21,8 @@ live. The reasoning behind these requirements is in the [assurance case](assuran
    committed. Examples use placeholders.
 5. **Releases are verifiable.** Release files are listed in a `SHA256SUMS` signed keylessly by the release
    workflow, with SLSA provenance and an SBOM of the pinned images ([verifying-releases.md](verifying-releases.md)).
-6. **Backups don't leak.** `scripts/backup.sh` writes archives readable only by the user who ran it, and
+6. **Backups don't leak.** `scripts/backup.sh` writes archives readable only by the user who ran it (the scheduled
+   copy off the host keeps those modes), and
    `scripts/restore.sh` writes only the mounts the backup's checksummed `MANIFEST` lists and the service still
    has, never the Docker socket.
 
@@ -81,6 +82,9 @@ since their images offer nothing else. Without capabilities that root can only r
 - **Restart loops.** autoheal restarts an unhealthy service every few minutes for as long as it stays unhealthy;
   that keeps a hung service available but can hide a real fault. Restarts are logged (and sent to the webhook if
   one is set).
+- **Backups off the host from the host itself.** The scheduled backup can delete old backups on the backup
+  server, so whoever controls this host can delete them too. Snapshots or a recycle bin on the backup server,
+  outside this host's reach, are what protect them.
 - **The host.** Anyone with root, `docker` group membership or write access to `.env` or the services' data
   controls the stack; those are trusted.
 - **Upstream images' internals.** Some images run as root inside the container; that is the image's design and
@@ -97,4 +101,6 @@ since their images offer nothing else. Without capabilities that root can only r
 | NUT server login | PeaNUT's settings | same |
 | PeaNUT's own login (bcrypt hash) | PeaNUT's `auth.yaml` in `PEANUT_CONFIG_PATH` | same |
 | autoheal's webhook URL | `autoheal.env` (mode `600`, gitignored) | same |
+| The backup push monitor's URL | `backup.env` (mode `600`, gitignored) | same |
+| The key for the backup server | the backup user's `~/.ssh` on the host | same |
 | Backups of the data | off the host, mode `600` | anywhere public |

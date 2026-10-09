@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Back up the stack's state: every service's data mounts (each read-write volume or directory it mounts, such as
 # Nginx Proxy Manager's configuration and certificates or Uptime Kuma's database; never the Docker socket) and the
-# settings files. The stack is stopped while the archives are written, so the databases are consistent, and
-# whatever was running is started again afterwards.
+# settings files. Each service is stopped only while its own archives are written, so its database is consistent,
+# and started again afterwards if it was running; services with nothing to archive keep running.
 #
 #   scripts/backup.sh [DIR]      DIR defaults to backups/<date>-<time> in the checkout (gitignored)
 #
@@ -38,28 +38,40 @@ for service in $(docker compose config --services); do
 done
 
 running=$(docker compose ps --services --status running)
+stopped=""
 restart() {
   status=$?
-  if [ -n "$running" ]; then
-    echo "Starting what was running"
-    # shellcheck disable=SC2086 # one service name per word
-    docker compose start $running || status=1
+  if [ -n "$stopped" ]; then
+    echo "Starting $stopped"
+    docker compose start "$stopped" || status=1
   fi
   exit "$status"
 }
 trap restart EXIT
-echo "Stopping the stack"
-docker compose stop
 
 printf '# archive\tservice\tmount\tsource\timage\n' >"$dest/MANIFEST"
 for service in "${services[@]}"; do
   id=$(docker compose ps --all --quiet "$service")
   image=$(docker inspect --format '{{.Config.Image}}' "$id")
+  mounts=()
   while IFS=$'\t' read -r mount source; do
-    if ! is_dir "$id" "$mount"; then
+    if is_dir "$id" "$mount"; then
+      mounts+=("$mount"$'\t'"$source")
+    else
       echo "Skipping $service $mount (not a directory)"
-      continue
     fi
+  done < <(data_mounts "$id")
+  if [ ${#mounts[@]} -eq 0 ]; then continue; fi
+
+  case $'\n'"$running"$'\n' in
+    *$'\n'"$service"$'\n'*)
+      echo "Stopping $service"
+      stopped=$service
+      docker compose stop "$service"
+      ;;
+  esac
+  for entry in "${mounts[@]}"; do
+    IFS=$'\t' read -r mount source <<<"$entry"
     archive=$(archive_name "$service" "$mount")
     echo "Archiving $service $mount ($source)"
     # tar runs as root in the container so it can read every file; the archive itself is written by this shell,
@@ -67,7 +79,12 @@ for service in "${services[@]}"; do
     docker run --rm --network none --volumes-from "$id:ro" "$busybox" tar -czf - -C "$mount" . \
       </dev/null >"$dest/$archive"
     printf '%s\t%s\t%s\t%s\t%s\n' "$archive" "$service" "$mount" "$source" "$image" >>"$dest/MANIFEST"
-  done < <(data_mounts "$id")
+  done
+  if [ -n "$stopped" ]; then
+    echo "Starting $service"
+    docker compose start "$service"
+    stopped=""
+  fi
 done
 
 # The settings: .env and any service's env file, or only the files in COMPOSE_ENV_FILES when that's set (the smoke

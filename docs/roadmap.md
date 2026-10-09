@@ -17,7 +17,8 @@ file changes with them, in the same pull request.
 ## Next: safe upgrades and rebuilds
 
 - Rehearse the documented rebuild ([rebuilding.md](rebuilding.md)) on a scratch machine.
-- Scheduled backups copied off the host.
+- Done: scheduled backups copied off the host (`scripts/scheduled-backup.sh`, a systemd timer), reported to Uptime
+  Kuma.
 
 ## Later
 

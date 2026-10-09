@@ -32,6 +32,21 @@ Read by the `autoheal` service (template: [`autoheal.env.example`](../autoheal.e
 | --- | --- |
 | `WEBHOOK_URL` | Where autoheal posts a notice each time it restarts a container (a secret). A Discord channel webhook works as is; empty or missing = log only |
 
+### `backup.env`
+
+Read by `scripts/scheduled-backup.sh` (template: [`backup.env.example`](../backup.env.example)); optional, mode
+`600`, gitignored. Read as data, never run: only these keys, one `KEY=value` per line; anything else is an error.
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `BACKUP_DIR` | `backups` | Where backups are written (relative to the checkout, or absolute). |
+| `BACKUP_KEEP` | `3` | How many backups are kept in `BACKUP_DIR`; older ones are deleted. |
+| `BACKUP_REMOTE` | empty | rsync destination each backup is copied to, such as `backup-host:/volume1/ares-backups` (an SSH alias); empty = no copy. |
+| `BACKUP_REMOTE_KEEP` | `30` | How many backups are kept at `BACKUP_REMOTE`; older ones are deleted. |
+| `BACKUP_PING_URL` | empty | An Uptime Kuma push URL (a secret), told `up` after each good run and `down` after a failed one. |
+
+Only directories named like a backup (`<date>-<time>`) are ever deleted, here or at the remote.
+
 ## Services and ports
 
 | Service | Image | Host port → container | What |
@@ -82,16 +97,18 @@ Exact versions and digests are in [`compose.yaml`](../compose.yaml).
 | `make check` | `docker compose config --format json \| python scripts/check_compose.py`: the policy check |
 | `python scripts/check_compose.py [FILE] [--sbom OUT]` | Checks a resolved Compose config (from `FILE` or stdin); `--sbom` also writes a CycloneDX 1.6 SBOM of the images. Exit 0 = no violations, 1 = violations (one line each), 2 = unreadable input |
 | `make test`, `make lint` | The checker's tests and the linters |
-| `scripts/backup.sh [DIR]` | Stops the stack, archives every service's data mounts (every read-write volume or bind mount except the Docker socket and anonymous volumes), `.env` and any `<service>.env` into `DIR` (default `backups/<date>-<time>`, gitignored) with a `MANIFEST` and `SHA256SUMS`, all mode `600`, then starts what was running. Exit 0 = backup complete |
+| `scripts/backup.sh [DIR]` | Archives every service's data mounts (every read-write volume or bind mount except the Docker socket and anonymous volumes), `.env` and any `<service>.env` into `DIR` (default `backups/<date>-<time>`, gitignored) with a `MANIFEST` and `SHA256SUMS`, all mode `600`. Each service is stopped only while its own mounts are archived and started again if it was running. Exit 0 = backup complete |
+| `scripts/scheduled-backup.sh` | Runs `scripts/backup.sh` into `BACKUP_DIR/<date>-<time>`, copies it to `BACKUP_REMOTE` with rsync (`SHA256SUMS` last), deletes all but the newest `BACKUP_REMOTE_KEEP` there and `BACKUP_KEEP` here, and reports to `BACKUP_PING_URL` ([`backup.env`](#backupenv)). Run nightly by the systemd user units in `deploy/systemd/`. Exit 0 = backup complete and copied |
 | `scripts/restore.sh [--yes] DIR [SERVICE...]` | Verifies `DIR/SHA256SUMS`, checks the `MANIFEST`, creates missing containers and volumes, asks for confirmation (unless `--yes`), stops the services, replaces the contents of each listed mount with its archive (owners and modes kept), and starts what was running. Writes only mounts the service still has read-write; never the Docker socket |
-| `make smoke` | `scripts/smoke-test.sh`: starts every service under a separate Compose project with throwaway directories, volumes and networks, no fixed container names, no published ports and no env files; waits until all are healthy, round-trips a backup and restore over every data mount, makes a test container unhealthy and checks that autoheal restarts it, then removes what it created. Exit 0 = all passed |
+| `make smoke` | `scripts/smoke-test.sh`: starts every service under a separate Compose project with throwaway directories, volumes and networks, no fixed container names, no published ports and no env files; waits until all are healthy, checks that Uptime Kuma can ping, round-trips a backup and restore over every data mount, runs the scheduled backup against a stand-in backup server, makes a test container unhealthy and checks that autoheal restarts it, then removes what it created. Exit 0 = all passed |
 
 ## Outbound connections
 
 From the host: the image registries (Docker Hub, `lscr.io`) on `docker compose pull`. From the services: Nginx
 Proxy Manager to the backends it proxies and to Let's Encrypt; Uptime Kuma to what it monitors and to its
 notification channels; PeaNUT to the NUT server; Portainer to the agents on the other Docker hosts; autoheal to
-its webhook, if one is set.
+its webhook, if one is set. The scheduled backup to `BACKUP_REMOTE` (rsync, usually over SSH) and to
+`BACKUP_PING_URL`, if they are set.
 
 ## Release files
 

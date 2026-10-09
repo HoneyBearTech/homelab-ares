@@ -1,0 +1,13 @@
+# Starts homelab-ares-backup.service every night. Each service is stopped only while its own data is archived
+# (seconds for most; the proxy included), so pick a quiet hour. Persistent: a run missed while the host was off
+# happens at the next boot.
+[Unit]
+Description=Nightly backup of the homelab-ares stack
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
