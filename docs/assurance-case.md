@@ -37,7 +37,9 @@ who already has root or `docker` group access on the host, or write access to `.
    labelled exceptions.
 6. **Ares → other Docker hosts.** Portainer's agents obey only their paired server; that pairing makes this
    server's Portainer the key to every agent host.
-7. **Pull requests → CI.** Fork pull requests get a read-only token and no secrets.
+7. **Pull requests → CI.** Fork pull requests get a read-only token and no secrets. The project's one
+   secret, a Docker Hub token that can only read public images, is logged out before the smoke test starts
+   any container.
 
 ## Secure design principles
 
