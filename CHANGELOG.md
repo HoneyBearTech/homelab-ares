@@ -24,6 +24,10 @@ All notable changes to homelab-ares are documented here. The format follows
 
 - `scripts/backup.sh` stops one service at a time, only while its own data is archived, instead of the whole stack;
   services with nothing to archive (autoheal, socket-proxy) keep running. The proxy is down for seconds.
+- docs/installing.md#scheduled-backups: older backups need snapshots or a versioned copy on the backup server that
+  the backup user can't reach; a recycle bin isn't enough, since Synology's doesn't keep files deleted over rsync.
+  The backup key is installed with `restrict,from=...`, and a Synology also needs its rsync and user home
+  services on.
 
 ### Security
 

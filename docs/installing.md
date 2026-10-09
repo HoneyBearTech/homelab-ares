@@ -64,8 +64,12 @@ login and private key: copy them only to a machine you trust as much as this one
 
 1. **On the backup server**, create a folder for the backups and a user that can write only there and use rsync
    over SSH (on a Synology: a shared folder, a non-admin user with read/write on that folder only, rsync allowed
-   under Application Privileges, SSH on). Turn on snapshots or a recycle bin for the folder: whoever controls this
-   host can delete what it copied there.
+   under Application Privileges, SSH on, the rsync service on under File Services, and the user home service on so
+   the user can have an `authorized_keys`). Whoever controls this host can delete or overwrite what it copied
+   there, so keep older versions where the backup user can't reach them: snapshots of the folder, or a versioned
+   copy of it made on the server after the nightly backup (on a Synology without Btrfs, a Hyper Backup task with
+   rotation, into a folder the backup user has no access to). A recycle bin isn't enough: Synology's doesn't keep
+   files deleted over rsync.
 2. **On this host**, as the user who runs the stack, install rsync and curl, and create a key used only for the
    backups, with an alias for it in `~/.ssh/config`:
 
@@ -82,7 +86,8 @@ login and private key: copy them only to a machine you trust as much as this one
      IdentitiesOnly yes
    ```
 
-   Add the public key to the backup user's `~/.ssh/authorized_keys` on the server, then check that
+   Add the public key to the backup user's `~/.ssh/authorized_keys` on the server, prefixed with
+   `restrict,from="<this host's address>"` (no shell or forwarding, and only from this host), then check that
    `rsync --list-only backup-host:/volume1/<folder>/` works without a password prompt.
 3. **Settings**: `cp backup.env.example backup.env && chmod 600 backup.env`, then set
    `BACKUP_REMOTE=backup-host:/volume1/<folder>` and, optionally, the retention and `BACKUP_PING_URL`. For the
