@@ -5,7 +5,16 @@
 # proposes updates. scripts/check_compose.py enforces the policy (docs/security.md#policy).
 name: homelab-ares
 
+# Every service starts with no Linux capabilities and can't gain privileges (setuid binaries, file capabilities);
+# a service that needs a capability adds back only that one, from Docker's default set (docs/security.md#hardening).
+x-hardened: &hardened
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
 x-defaults: &defaults
+  <<: *hardened
   restart: unless-stopped
   environment:
     TZ: ${TZ:?set TZ in .env}
@@ -26,6 +35,17 @@ services:
     <<: *defaults
     image: jc21/nginx-proxy-manager:2.16.0@sha256:4393e642e233e5efd5adeb7f10918d4aaea71c9ed875b94190273fc8e87f9594
     container_name: nginxproxymanager
+    # Its init (s6-overlay) runs as root: it creates the npm user, takes ownership of /data and runs nginx and the
+    # admin backend as that user, so it needs these of Docker's default capabilities. Its root filesystem stays
+    # writable: nginx, certbot and the init write all over it.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+      - KILL
+      - NET_BIND_SERVICE # ports 80 and 443
     labels:
       autoheal: "true"
     ports:
@@ -47,6 +67,14 @@ services:
     # is SQLite), which carried almost all of the image's known vulnerabilities.
     image: louislam/uptime-kuma:2.5.5-slim@sha256:9c56a772a7df53f444a404c579e87a27bd0c201375d00d6745a75bf8138f4342
     container_name: uptime-kuma
+    # It runs as root but its data directory belongs to uid 1000 (DAC_OVERRIDE), and the image's ping carries the
+    # NET_RAW file capability, which Linux refuses to run without it (ping monitors).
+    cap_add:
+      - DAC_OVERRIDE
+      - NET_RAW
+    read_only: true
+    tmpfs:
+      - /tmp
     labels:
       autoheal: "true"
     ports:
@@ -63,6 +91,9 @@ services:
     # Its API, metrics included, needs that login (HTTP Basic auth works for scrapers); /api/ping stays open.
     image: brandawg93/peanut:6.0.0@sha256:6629dce915da8b313f08b2e73dd2e54b60e7c0f642c21a8ebc37fe0a820bf41e
     container_name: PeaNUT
+    read_only: true
+    tmpfs:
+      - /tmp
     labels:
       autoheal: "true"
     ports:
@@ -80,6 +111,9 @@ services:
     # neither). Updated by hand, together with the Portainer agents on the other hosts (not auto-merged).
     image: portainer/portainer-ce:2.39.8-alpine@sha256:a0d04c9826efe13402e561589cbdf532d669671f62e40cc02dcd0b5211e4a9a5
     container_name: portainer
+    read_only: true
+    tmpfs:
+      - /tmp # stack deployments and backup uploads
     labels:
       autoheal: "true"
       org.honeybeartech.ares.allow.docker-socket: >-
@@ -99,8 +133,10 @@ services:
   # restart and stop containers and nothing else. Optional restart notices go to a webhook from autoheal.env.
   autoheal:
     image: willfarrell/autoheal:latest@sha256:e7f42d5365c7c4490dd0cafc2858bb9fd2d64a274448d2de2bb5c386f1af7a0f
+    <<: *hardened
     container_name: autoheal
     restart: unless-stopped
+    read_only: true
     # autoheal exits if it can't reach the proxy, so it starts only once the proxy answers. (After a host reboot
     # Docker starts both at once; autoheal then restarts until the proxy is up, a few seconds.)
     depends_on:
@@ -135,6 +171,7 @@ services:
   # starting or deleting containers, exec, images, volumes and every other POST are refused.
   socket-proxy:
     image: lscr.io/linuxserver/socket-proxy:3.4.6@sha256:362cadf55b3c7920189347d0f4d60b389e2f80e929581bf10793f2371aab41e5
+    <<: *hardened
     container_name: socket-proxy
     restart: unless-stopped
     read_only: true

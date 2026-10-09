@@ -8,9 +8,12 @@ live. The reasoning behind these requirements is in the [assurance case](assuran
 1. **Only reviewed versions run.** Every image is pinned as `name:tag@sha256:<digest>`. A registry tag
    that is moved or hijacked doesn't change what `docker compose pull` fetches; a new version arrives only
    as a pull request that changes the digest.
-2. **No container gets more of the host than it needs.** No service runs privileged, adds Linux
-   capabilities, shares the host's network or PID namespace, or mounts the Docker socket (which is root on
-   the host), unless the exception is written into the service as a reasoned label and reviewed.
+2. **No container gets more of the host than it needs.** Every service drops every Linux capability, adds back
+   only the ones its image needs (never more than Docker's default set) and can't gain privileges from setuid
+   binaries or file capabilities. No service runs privileged, shares the host's network or PID namespace, or
+   mounts the Docker socket (which is root on the host), unless the exception is written into the service as a
+   reasoned label and reviewed. Where an image allows it, its root filesystem is read-only
+   ([Hardening](#hardening)).
 3. **No secrets in the repository.** The services keep their logins, API tokens, TLS private keys and the NUT
    login in their own data, outside the repository. `.env` holds settings only. Secret scanning with push
    protection and a gitleaks scan of the whole history in CI back this up.
@@ -35,10 +38,30 @@ non-empty reason:
 | `latest` | uses the `latest` tag |
 | `build` | builds an image instead of pulling a pinned one |
 | `privileged` | sets `privileged: true` |
-| `cap-add` | adds Linux capabilities |
+| `no-new-privileges` | doesn't set `security_opt: [no-new-privileges:true]` |
+| `cap-drop` | doesn't drop every capability (`cap_drop: [ALL]`) |
+| `cap-add` | adds a capability outside Docker's default set (adding back one of those only narrows the default) |
 | `host-network` / `host-pid` | uses the host's network or PID namespace |
 | `docker-socket` | mounts the Docker socket |
 | `healthcheck` | has no health check, or disables it (one defined only in the image isn't visible to the check) |
+
+## Hardening
+
+What each service runs with, beyond the policy. Every service has `cap_drop: [ALL]` and
+`no-new-privileges:true`; the smoke test proves each one still starts healthy and survives a backup and restore
+with these settings, and that Uptime Kuma can still ping.
+
+| Service | Capabilities added back | Read-only root filesystem | Why |
+| --- | --- | --- | --- |
+| npm | `CHOWN`, `DAC_OVERRIDE`, `FOWNER`, `SETUID`, `SETGID`, `KILL`, `NET_BIND_SERVICE` | no | Its init runs as root, creates its user, takes ownership of its data and runs nginx on ports 80 and 443 as that user; nginx, certbot and the init write all over the image |
+| uptime-kuma | `DAC_OVERRIDE`, `NET_RAW` | yes (`/tmp` in memory) | It runs as root, but its data directory belongs to uid 1000; the image's `ping` carries the `NET_RAW` file capability, which Linux refuses to run without |
+| peanut | none | yes (`/tmp` in memory) | Runs as uid 1000 and writes only its settings directory |
+| portainer | none | yes (`/tmp` in memory) | Writes only its data volume and temporary files; it reaches Docker through the socket, which belongs to root |
+| autoheal | none | yes | Only talks to socket-proxy |
+| socket-proxy | none | yes (`/run`, `/tmp` in memory) | Only reads the socket |
+
+Nginx Proxy Manager, Uptime Kuma, Portainer, autoheal and socket-proxy still run as root inside their containers,
+since their images offer nothing else. Without capabilities that root can only reach what it owns.
 
 ## What it doesn't protect
 

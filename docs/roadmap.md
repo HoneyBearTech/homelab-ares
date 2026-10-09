@@ -21,8 +21,7 @@ file changes with them, in the same pull request.
 
 ## Later
 
-- Tighter container settings where the images allow it (read-only root filesystems, dropped capabilities,
-  non-root users).
+- Non-root users for the services whose images allow it.
 - Optional services as Compose profiles, so a smaller installation can leave them out.
 
 ## Security and project health

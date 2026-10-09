@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Smoke test of the stack: start every service in compose.yaml with throwaway settings, wait until each one reports
-# healthy, then mark every data mount, take a backup, change the data, restore the backup and check that the data
-# and health came back, make a test container unhealthy and check that autoheal restarts it (when the stack has
-# autoheal), and remove everything it created. CI runs it on every change; `make smoke` runs it locally.
+# healthy, check that Uptime Kuma can ping (when the stack has it), then mark every data mount, take a backup, change
+# the data, restore the backup and check that the data and health came back, make a test container unhealthy and
+# check that autoheal restarts it (when the stack has autoheal), and remove everything it created. CI runs it on
+# every change; `make smoke` runs it locally.
 # Without a compose.yaml there is nothing to test, and it says so and passes.
 #
 # It stays away from any real installation on the same Docker host: its own Compose project, settings from
@@ -125,6 +126,12 @@ fail() {
   echo "error: $*" >&2
   exit 1
 }
+
+# Uptime Kuma's ping monitors run the image's ping, which needs NET_RAW (compose.yaml adds it back).
+if echo "$stack_services" | grep -qx uptime-kuma; then
+  compose exec -T uptime-kuma ping -c 1 -W 5 127.0.0.1 >/dev/null || fail "uptime-kuma can't run ping"
+  echo "uptime-kuma can run ping"
+fi
 
 # A marker file in a data mount, written and read in a throwaway container (the service's image may have no shell).
 put_marker() {

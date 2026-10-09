@@ -41,7 +41,7 @@ who already has root or `docker` group access on the host, or write access to `.
 
 ## Secure design principles
 
-- **Least privilege**: no added capabilities, no host namespaces, one documented socket mount, read-only CI
+- **Least privilege**: every capability dropped and only the needed ones added back, no new privileges, no host namespaces, one documented socket mount, read-only CI
   tokens raised per job.
 - **Fail-safe defaults**: the policy check fails on anything it doesn't recognise as allowed; an exception
   needs a reason, in the file, in review. `restore.sh` refuses anything in a backup it can't account for.
@@ -57,7 +57,7 @@ who already has root or `docker` group access on the host, or write access to `.
 | --- | --- | --- |
 | CWE-494 (code downloaded without integrity check) | Image pulls | Digest pins; signed release checksums |
 | CWE-798 / CWE-312 (hard-coded or cleartext credentials) | Compose `environment:`, `.env`, docs | No secrets in the repo; gitleaks; push protection |
-| CWE-250 (unnecessary privileges) | Container settings | Policy rules `privileged`, `cap-add`, `host-*`, `docker-socket` |
+| CWE-250 (unnecessary privileges) | Container settings | Policy rules `privileged`, `no-new-privileges`, `cap-drop`, `cap-add`, `host-*`, `docker-socket`; read-only root filesystems where the images allow it |
 | CWE-1393 (default passwords) | Nginx Proxy Manager's first start | Documented as the first step of setup ([quick-start.md](quick-start.md)) |
 | CWE-22 (path traversal) | Restoring a backup | `restore.sh` validates archive names and mount paths from the checksummed `MANIFEST` |
 | CWE-1104 (unmaintained third-party components) | Images, tools, Actions | Dependabot weekly; image scan; triage SLAs ([dependencies.md](dependencies.md)) |
