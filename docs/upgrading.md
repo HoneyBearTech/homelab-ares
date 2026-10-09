@@ -26,11 +26,12 @@ scripts/backup.sh /path/to/backup-dir   # or a directory of your choice (new or 
 ```
 
 The directory holds one `<service>--<path>.tar.gz` per mount (for example `npm--etc_letsencrypt.tar.gz`), the
-settings under `env/`, a `MANIFEST` naming each archive's service, container path, volume or host path and
-image, and `SHA256SUMS`. Everything in it is readable only by the user who ran the backup. **Copy it off the
-host**: it contains the certificates' private keys and every service's logins. Every service needs a container
-for the backup to read from, so run it on an installed stack. The Docker socket and anonymous volumes are never
-archived. [Scheduled backups](installing.md#scheduled-backups) do this nightly and copy each backup off the host.
+settings under `env/`, a `MANIFEST` naming each archive's service, container path, volume or host path and image,
+`NETWORKS` (the address range of the proxy's network, for a rebuild), `VERSION` (the checkout's `git describe`) and
+`SHA256SUMS`. Everything in it is readable only by the user who ran the backup. **Copy it off the host**: it
+contains the certificates' private keys and every service's logins. Every service needs a container for the backup
+to read from, so run it on an installed stack. The Docker socket and anonymous volumes are never archived.
+[Scheduled backups](installing.md#scheduled-backups) do this nightly and copy each backup off the host.
 
 ## Upgrading
 

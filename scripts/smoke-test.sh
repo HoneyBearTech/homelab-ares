@@ -161,6 +161,11 @@ else
     put_marker "$(compose ps --quiet "$service")" "$mount" backed-up
   done
   "$root/scripts/backup.sh" "$work/backup"
+  for network in "${networks[@]+"${networks[@]}"}"; do
+    grep -Eq "^$network"$'\t'"[0-9a-f.:]+/[0-9]+"$'\t' "$work/backup/NETWORKS" ||
+      fail "the backup's NETWORKS doesn't record the address range of $network"
+  done
+  [ -s "$work/backup/VERSION" ] || fail "the backup has no VERSION"
   [ "$(compose ps --services --status running | wc -l)" -eq "$(compose config --services | wc -l)" ] ||
     fail "backup.sh didn't start every service again"
 

@@ -40,8 +40,8 @@ the checker's unit tests with a coverage floor, `docker compose config` and the 
 ([`scripts/smoke-test.sh`](scripts/smoke-test.sh)), on an arm64 runner like the server, starts every
 service with throwaway directories and volumes, fails unless each one reports healthy within five minutes,
 runs a backup and restore round trip over every data mount, runs the scheduled backup against a stand-in backup
-server, and checks that autoheal restarts a container that turns unhealthy. CodeQL, dependency review, a DCO check and OpenSSF
-Scorecard also run on the repository.
+server, and checks that autoheal restarts a container that turns unhealthy. CodeQL, dependency review, a DCO check
+and OpenSSF Scorecard also run on the repository.
 
 The checker's tests are offline: they feed it JSON fixtures in [`tests/fixtures/`](tests/fixtures/), with no
 Docker and no network. The smoke test needs both: it pulls the pinned images.
