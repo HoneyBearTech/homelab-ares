@@ -71,7 +71,7 @@ Exact versions and digests are in [`compose.yaml`](../compose.yaml).
 
 | Label | Meaning |
 | --- | --- |
-| `org.honeybeartech.ares.allow.<rule>` | Lets one service break one policy rule; the value is the reason, and must not be empty. Rules: `image`, `digest`, `latest`, `build`, `privileged`, `cap-add`, `host-network`, `host-pid`, `docker-socket`, `healthcheck` ([security.md](security.md#policy)). In use: `portainer` and `socket-proxy` (`docker-socket`), `autoheal` (`latest`). |
+| `org.honeybeartech.ares.allow.<rule>` | Lets one service break one policy rule; the value is the reason, and must not be empty. Rules: `image`, `digest`, `latest`, `build`, `privileged`, `no-new-privileges`, `cap-drop`, `cap-add`, `host-network`, `host-pid`, `docker-socket`, `healthcheck` ([security.md](security.md#policy)). In use: `portainer` and `socket-proxy` (`docker-socket`), `autoheal` (`latest`). |
 | `autoheal` | `"true"` on every service autoheal may restart when its health check fails: npm, uptime-kuma, peanut, portainer and socket-proxy. |
 
 ## Commands

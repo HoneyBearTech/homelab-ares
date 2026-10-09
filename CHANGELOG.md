@@ -6,6 +6,15 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- Every service drops every Linux capability and runs with `no-new-privileges`; Nginx Proxy Manager and Uptime
+  Kuma add back only the capabilities they need, from Docker's default set. Every service except Nginx Proxy
+  Manager has a read-only root filesystem. The table is in docs/security.md#hardening.
+- The policy check enforces it: new rules `no-new-privileges` and `cap-drop`, and `cap-add` now fails only on a
+  capability outside Docker's default set.
+- The smoke test also checks that Uptime Kuma can still ping.
+
 ## [0.1.0] - 2026-10-07
 
 The first release: the Ares stack as a Compose file, every image pinned by version tag and digest for
