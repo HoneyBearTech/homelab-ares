@@ -83,8 +83,9 @@ since their images offer nothing else. Without capabilities that root can only r
   that keeps a hung service available but can hide a real fault. Restarts are logged (and sent to the webhook if
   one is set).
 - **Backups off the host from the host itself.** The scheduled backup can delete old backups on the backup
-  server, so whoever controls this host can delete them too. Snapshots or a recycle bin on the backup server,
-  outside this host's reach, are what protect them.
+  server, so whoever controls this host can delete or overwrite them too. Snapshots or a versioned copy on the
+  backup server, outside this host's reach, are what protect them; a recycle bin may not see deletions made over
+  rsync (Synology's doesn't).
 - **The host.** Anyone with root, `docker` group membership or write access to `.env` or the services' data
   controls the stack; those are trusted.
 - **Upstream images' internals.** Some images run as root inside the container; that is the image's design and
