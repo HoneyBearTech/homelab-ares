@@ -16,8 +16,9 @@ anything you depend on.
 
 The state worth keeping is each service's data: every read-write volume or directory it mounts (the proxy's
 settings and certificates, Uptime Kuma's database, PeaNUT's settings, Portainer's database). `scripts/backup.sh`
-stops the stack so the databases are consistent, archives each of those mounts, copies `.env` and any
-`<service>.env` (such as `autoheal.env`), and starts again whatever was running:
+stops one service at a time, archives its mounts while it is stopped so its database is consistent, and starts it
+again if it was running; services with nothing to archive keep running. It also copies `.env` and any
+`<service>.env` (such as `autoheal.env`):
 
 ```sh
 scripts/backup.sh                       # into backups/<date>-<time>/ in the checkout (gitignored)
@@ -29,7 +30,7 @@ settings under `env/`, a `MANIFEST` naming each archive's service, container pat
 image, and `SHA256SUMS`. Everything in it is readable only by the user who ran the backup. **Copy it off the
 host**: it contains the certificates' private keys and every service's logins. Every service needs a container
 for the backup to read from, so run it on an installed stack. The Docker socket and anonymous volumes are never
-archived.
+archived. [Scheduled backups](installing.md#scheduled-backups) do this nightly and copy each backup off the host.
 
 ## Upgrading
 

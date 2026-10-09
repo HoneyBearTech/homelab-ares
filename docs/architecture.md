@@ -70,6 +70,7 @@ Nothing on the host updates itself: a version that runs is always a version that
 | `.env.example`, `autoheal.env.example` | Templates for the settings and autoheal's optional webhook |
 | `scripts/check_compose.py` | The policy check and SBOM generator (standard-library Python) |
 | `scripts/backup.sh`, `scripts/restore.sh` | Backup and restore of every service's data |
+| `scripts/scheduled-backup.sh`, `deploy/systemd/` | Nightly backup, copied off the host with rsync and pruned, reported to an Uptime Kuma push monitor |
 | `scripts/smoke-test.sh` | Starts the stack in isolation, waits for health, and round-trips a backup |
 | `tests/` | The checker's tests, with JSON fixtures |
 | `docs/` | This documentation |

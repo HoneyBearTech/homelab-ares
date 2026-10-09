@@ -55,6 +55,57 @@ the stack at their existing data instead of starting empty:
 
 Running `main` instead of a release is possible but unsupported for anything you depend on.
 
+## Scheduled backups
+
+`scripts/scheduled-backup.sh` takes a backup (`scripts/backup.sh`), copies it to another machine with rsync, keeps
+only the newest few in both places and reports to an Uptime Kuma push monitor. A systemd timer runs it nightly.
+Every setting is in the optional `backup.env` ([interfaces.md](interfaces.md#backupenv)). The backups hold every
+login and private key: copy them only to a machine you trust as much as this one.
+
+1. **On the backup server**, create a folder for the backups and a user that can write only there and use rsync
+   over SSH (on a Synology: a shared folder, a non-admin user with read/write on that folder only, rsync allowed
+   under Application Privileges, SSH on). Turn on snapshots or a recycle bin for the folder: whoever controls this
+   host can delete what it copied there.
+2. **On this host**, as the user who runs the stack, install rsync and curl, and create a key used only for the
+   backups, with an alias for it in `~/.ssh/config`:
+
+   ```sh
+   sudo apt install -y rsync curl
+   ssh-keygen -t ed25519 -N '' -f ~/.ssh/homelab-ares-backup
+   ```
+
+   ```text
+   Host backup-host
+     HostName <the backup server's address>
+     User <the backup user>
+     IdentityFile ~/.ssh/homelab-ares-backup
+     IdentitiesOnly yes
+   ```
+
+   Add the public key to the backup user's `~/.ssh/authorized_keys` on the server, then check that
+   `rsync --list-only backup-host:/volume1/<folder>/` works without a password prompt.
+3. **Settings**: `cp backup.env.example backup.env && chmod 600 backup.env`, then set
+   `BACKUP_REMOTE=backup-host:/volume1/<folder>` and, optionally, the retention and `BACKUP_PING_URL`. For the
+   ping, add a monitor of type **Push** in Uptime Kuma with a heartbeat interval of 25 hours, and copy its URL.
+4. **Try it**: `scripts/scheduled-backup.sh`. Each service stops only while its own data is archived, so the proxy
+   is down for seconds, not for the whole backup.
+5. **Schedule it**, with the systemd user units in [`deploy/systemd/`](../deploy/systemd/) (they expect the
+   checkout at `~/homelab-ares`; edit both paths in the `.service` file if it's elsewhere). Lingering lets the
+   timer run while you're logged out:
+
+   ```sh
+   mkdir -p ~/.config/systemd/user
+   cp deploy/systemd/homelab-ares-backup.* ~/.config/systemd/user/
+   sudo loginctl enable-linger "$USER"
+   systemctl --user daemon-reload
+   systemctl --user enable --now homelab-ares-backup.timer
+   systemctl --user list-timers homelab-ares-backup.timer     # next run: 04:30, plus up to 10 minutes
+   journalctl --user -u homelab-ares-backup                   # what the last runs did
+   ```
+
+Restore a copy from the backup server as [rebuilding.md](rebuilding.md) describes; `scripts/restore.sh` verifies
+its `SHA256SUMS` first, and a copy that was cut off has none yet, so it is refused.
+
 ## Running it securely
 
 - **Admin UIs on the LAN only.** Nginx Proxy Manager's admin port (81), Portainer (9443) and Uptime Kuma (3001)
@@ -72,8 +123,10 @@ Running `main` instead of a release is possible but unsupported for anything you
 - Keep `autoheal.env` at mode `600`: it holds the webhook URL.
 - autoheal never gets the Docker socket: it goes through `socket-proxy`, which only lets it list, inspect,
   restart and stop containers, on an internal network.
-- Back up the services' data (`scripts/backup.sh`): it holds the certificates' private keys and every login
-  ([upgrading.md](upgrading.md#backing-up)).
+- Back up the services' data (`scripts/backup.sh`), and schedule it with a copy off the host
+  ([Scheduled backups](#scheduled-backups)): it holds the certificates' private keys and every login.
+- Keep `backup.env` at mode `600`: it holds the push monitor's URL. The backup key in `~/.ssh` should open only the
+  backup user's account on the backup server, and that account should reach only the backup folder.
 - Don't add services that mount the Docker socket, run privileged or use the host network without a documented
   reason; the policy check refuses them ([security.md](security.md)).
 - Don't run an auto-updater (such as Watchtower) on these containers: it would replace the pinned, reviewed

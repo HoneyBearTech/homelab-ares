@@ -6,6 +6,18 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Scheduled backups: `scripts/scheduled-backup.sh` takes a backup, copies it off the host with rsync, keeps the
+  newest few here and there, and reports to an Uptime Kuma push monitor. Settings in the optional, gitignored
+  `backup.env` (template `backup.env.example`); systemd user units in `deploy/systemd/` run it nightly
+  (docs/installing.md#scheduled-backups). The smoke test runs it against a stand-in backup server.
+
+### Changed
+
+- `scripts/backup.sh` stops one service at a time, only while its own data is archived, instead of the whole stack;
+  services with nothing to archive (autoheal, socket-proxy) keep running. The proxy is down for seconds.
+
 ### Security
 
 - Every service drops every Linux capability and runs with `no-new-privileges`; Nginx Proxy Manager and Uptime

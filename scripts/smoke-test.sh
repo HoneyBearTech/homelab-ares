@@ -179,6 +179,28 @@ else
   echo "Every data mount was restored, and every service is healthy again"
 fi
 
+# The unattended backup, copying to a stand-in for the backup server (a local directory, which rsync treats the same
+# way) that already holds two old backups and a directory that isn't one; keeping two there and one here must leave
+# the newer old one and the new one there, only the new one here, and the other directory alone.
+if [ ${#targets[@]} -gt 0 ]; then
+  echo "Scheduled backup: copy off the host and prune old backups"
+  mkdir -p "$work/scheduled/20200101-000000" "$work/remote/20200101-000000" "$work/remote/20200102-000000" \
+    "$work/remote/keep-me"
+  printf 'BACKUP_DIR=%s\nBACKUP_KEEP=1\nBACKUP_REMOTE=%s\nBACKUP_REMOTE_KEEP=2\n' "$work/scheduled" "$work/remote" \
+    >"$work/backup.env"
+  BACKUP_ENV_FILE=$work/backup.env "$root/scripts/scheduled-backup.sh"
+  entries() { find "$1" -mindepth 1 -maxdepth 1 -exec basename {} \; | sort | tr '\n' ' '; }
+  new=$(entries "$work/scheduled" | tr -d ' ')
+  [[ $new =~ ^[0-9]{8}-[0-9]{6}$ ]] || fail "expected only the new backup in BACKUP_DIR, found: $new"
+  [ "$(entries "$work/remote")" = "20200102-000000 $new keep-me " ] ||
+    fail "wrong backups kept at the remote: $(entries "$work/remote")"
+  (cd "$work/remote/$new" && sha256 -c --quiet SHA256SUMS) || fail "the copy off the host doesn't match its SHA256SUMS"
+  [ -z "$(find "$work/remote/$new" -perm -004)" ] || fail "the copy off the host is readable by other users"
+  [ "$(compose ps --services --status running | wc -l)" -eq "$(compose config --services | wc -l)" ] ||
+    fail "scheduled-backup.sh didn't leave every service running"
+  echo "The scheduled backup was copied intact, and only the newest backups were kept"
+fi
+
 if $has_autoheal; then
   echo "autoheal: making a test container unhealthy"
   test_id=$(compose ps --quiet autoheal-test)
