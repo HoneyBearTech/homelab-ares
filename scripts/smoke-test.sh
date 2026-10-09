@@ -92,6 +92,10 @@ has_autoheal=false
   echo "services:"
   for service in $stack_services; do
     printf '  %s:\n    container_name: !reset null\n    ports: !reset []\n    env_file: !reset []\n' "$service"
+    # PeaNUT creates this login on its first start, as it would the one its setup page asks for.
+    if [ "$service" = peanut ]; then
+      printf '    environment:\n      WEB_USERNAME: smoke-test\n      WEB_PASSWORD: smoke-test-password\n'
+    fi
     if [ "$service" = autoheal ]; then has_autoheal=true; fi
   done
   # A container that turns unhealthy on demand (a file in its tmpfs), for autoheal to restart.
@@ -131,6 +135,13 @@ fail() {
 if echo "$stack_services" | grep -qx uptime-kuma; then
   compose exec -T uptime-kuma ping -c 1 -W 5 127.0.0.1 >/dev/null || fail "uptime-kuma can't run ping"
   echo "uptime-kuma can run ping"
+fi
+
+# PeaNUT's login must be saved in its settings directory, or a new container (or a read-only root) loses it.
+if echo "$stack_services" | grep -qx peanut; then
+  peanut_config=$(sed -n 's/^PEANUT_CONFIG_PATH=//p' "$work/env")
+  [ -s "$peanut_config/auth.yaml" ] || fail "peanut didn't save its login in PEANUT_CONFIG_PATH"
+  echo "peanut saved its login in PEANUT_CONFIG_PATH"
 fi
 
 # A marker file in a data mount, written and read in a throwaway container (the service's image may have no shell).

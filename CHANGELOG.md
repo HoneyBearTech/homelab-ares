@@ -6,6 +6,12 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- PeaNUT saves its login in its settings directory (`AUTH_FILE_PATH=/config/auth.yaml`). PeaNUT 6.0.0 saves it
+  inside the container instead, where the read-only root filesystem stops it: the login created on the setup page
+  was never saved, and signing in failed. Fixed upstream but not released yet. The smoke test checks it.
+
 ## [0.2.0] - 2026-10-09
 
 Hardened services, nightly backups copied off the host, and a rebuild guide that recreates the proxy's network as

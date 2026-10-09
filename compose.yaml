@@ -91,6 +91,11 @@ services:
     # Its API, metrics included, needs that login (HTTP Basic auth works for scrapers); /api/ping stays open.
     image: brandawg93/peanut:6.0.0@sha256:6629dce915da8b313f08b2e73dd2e54b60e7c0f642c21a8ebc37fe0a820bf41e
     container_name: PeaNUT
+    environment:
+      TZ: ${TZ:?set TZ in .env}
+      # 6.0.0 saves its login in /app/config, outside /config: lost with the container, and with a read-only root
+      # never saved at all. Fixed upstream (Brandawg93/PeaNUT#426) but not released yet; drop this with the release.
+      AUTH_FILE_PATH: /config/auth.yaml
     read_only: true
     tmpfs:
       - /tmp
