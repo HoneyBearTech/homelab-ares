@@ -6,6 +6,18 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-09
+
+Hardened services, nightly backups copied off the host, and a rebuild guide that recreates the proxy's network as
+it was.
+
+### Upgrading
+
+- Every service now runs without Linux capabilities (except the few Nginx Proxy Manager and Uptime Kuma add back)
+  and with a read-only root filesystem. Data adopted from another installation must be owned as each image
+  expects: Portainer's volume by root, PeaNUT's settings directory by uid 1000. A service that fails with
+  "permission denied" on its first start usually has data with an unexpected owner.
+
 ### Added
 
 - Scheduled backups: `scripts/scheduled-backup.sh` takes a backup, copies it off the host with rsync, keeps the
@@ -21,7 +33,6 @@ All notable changes to homelab-ares are documented here. The format follows
 - docs/rebuilding.md: fetching the newest complete backup from the backup server, recreating the proxy's network
   from `NETWORKS`, what to check after the restore, and how to rehearse a rebuild on a scratch machine without
   disturbing the live host.
-
 - `scripts/backup.sh` stops one service at a time, only while its own data is archived, instead of the whole stack;
   services with nothing to archive (autoheal, socket-proxy) keep running. The proxy is down for seconds.
 - docs/installing.md#scheduled-backups: older backups need snapshots or a versioned copy on the backup server that
@@ -92,5 +103,6 @@ The first release: the Ares stack as a Compose file, every image pinned by versi
   PeaNUT 6.0.0 (87 → 26, three critical issues in its web framework fixed); Portainer 2.39.8 (60 → 8). What's left,
   and why: [docs/dependencies.md](docs/dependencies.md#current-findings).
 
-[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.0
 [0.1.0]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.1.0
