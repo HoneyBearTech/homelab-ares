@@ -122,7 +122,8 @@ check that it reaches the backup server and the push monitor. Delete `~/restore`
 
 - **Host settings**: the static address, firewall rules, SSH keys (including the backup key), monitoring agents.
 - **Other machines' view of this one**: DNS records, the router's port forwards, anything that reaches Ares by
-  address.
+  address, and services behind the proxy that trust it by address (such as Home Assistant's `trusted_proxies`):
+  they turn away a host with a new address.
 - **Services from other projects** on the same host (metrics and logs): restore them from their own backups.
 
 ## Rehearsing a rebuild
@@ -133,16 +134,59 @@ Desktop on a Mac with Apple silicon (there, put the data directories under your 
 `chmod 777` PeaNUT's instead of the `chown`; macOS checks the backup with `shasum -a 256 -c` instead of
 `sha256sum -c`). Use the newest backup, and leave the live host alone.
 
+Before you start, clear what would clash with the stack on the scratch machine, and put it back afterwards:
+
+- **Container names** are fixed (`nginxproxymanager`, `uptime-kuma`, `PeaNUT`, `portainer`, `autoheal`,
+  `socket-proxy`): stop a container that already has one of them and `docker rename` it for the rehearsal.
+- **Ports** 80, 81, 443, 3001, 8000, 8080 and 9443 must be free.
+- **The proxy's address range** (in the backup's `NETWORKS`) must be free: `docker network ls -q | xargs docker
+  network inspect --format '{{.Name}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'` shows what is taken.
+
+While the live host is still running, step 3 doesn't need a new key on the backup server: relay the copy through
+the live host, which already has one (nothing is stored there):
+
+```sh
+rsync -rlpt -e "ssh live-host ssh" backup-host:/volume1/<folder>/<date>-<time>/ ~/restore/
+```
+
 The restored services believe they are the live ones, so keep them from acting like it:
 
 - **Don't copy `autoheal.env` or `backup.env`, and don't install the timer**: they'd post to your restart channel
   and write to the backup server.
 - **Uptime Kuma** starts monitoring at once and notifies like the live one about anything it can't reach from the
-  scratch machine. Once you've seen its monitors, pause them all.
+  scratch machine. Pause its monitors before it first starts: `restore.sh` leaves the services stopped, so between
+  it and `docker compose up`, run
+
+  ```sh
+  docker run --rm -v "$UPTIME_KUMA_VOLUME":/data alpine:3.22 sh -c \
+    'apk add -q sqlite && sqlite3 /data/kuma.db "update monitor set active = 0;"'
+  ```
+
+  (its database is SQLite unless `db-config.json` in the volume says otherwise). Its monitors are then listed, all
+  paused.
 - **Portainer** holds the agents' trust, so it can manage every agent host just like the live one. Look, don't
   change anything, and stop it when you're done.
 - **Nginx Proxy Manager** answers on the scratch machine's ports 80 and 443, which nothing forwards to. It may try
   to renew certificates that are due; that does no harm.
+
+Checking the proxied sites from the scratch machine:
+
+- **Docker Desktop** hands Nginx Proxy Manager every request from its own VM's address, so sites behind an access
+  list answer 403. Send the requests from the proxy network's gateway instead, an address access lists can allow:
+
+  ```sh
+  ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' nginxproxymanager)
+  docker run --rm --network host curlimages/curl -sk -o /dev/null -w '%{http_code}\n' \
+    --resolve "site.example.com:443:$ip" https://site.example.com/
+  ```
+
+  and compare each site's status code with the live proxy's.
+- A service that trusts the proxy by address (Home Assistant's `trusted_proxies`, for example) answers 400: the
+  scratch machine isn't the address it trusts. A rebuild that keeps the old address doesn't have this.
+
+For scale, a rehearsal on Docker Desktop (Apple silicon) with a 39 MB backup over the LAN: copy and check 6 s,
+restore 4 s, start until healthy 11 s, with the images already pulled. Most of a real rebuild is installing the
+operating system and Docker.
 
 Note how long each step took and anything this page got wrong or left out, and fix the page in a pull request.
 Then remove everything the rehearsal created; it all holds secrets:
@@ -153,3 +197,6 @@ docker volume rm "$UPTIME_KUMA_VOLUME" "$PORTAINER_VOLUME" homelab-ares_npm-logr
 docker network rm "$PROXY_NETWORK"
 sudo rm -rf "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH" ~/restore .env ./*.env
 ```
+
+(Docker Desktop leaves those files to your user: no `sudo` there.) Then put back anything you renamed, stopped or
+removed for the rehearsal.
