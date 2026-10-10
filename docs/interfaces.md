@@ -69,6 +69,7 @@ Exact versions and digests are in [`compose.yaml`](../compose.yaml).
 | --- | --- | --- |
 | `/data` | `NPM_DATA_PATH` | npm: settings database, proxy host configuration, logs (`/data/logs`, not backed up) |
 | `/etc/letsencrypt` | `NPM_LETSENCRYPT_PATH` | npm: TLS certificates and their private keys |
+| `/var/lib/logrotate` | volume `homelab-ares_npm-logrotate` (created by Compose, no setting) | npm: when each log in `/data/logs` was last rotated |
 | `/app/data` | volume `UPTIME_KUMA_VOLUME` | uptime-kuma: database |
 | `/config` | `PEANUT_CONFIG_PATH` | peanut: settings |
 | `/data` | volume `PORTAINER_VOLUME` | portainer: database, users, environments |

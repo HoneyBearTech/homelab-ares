@@ -11,8 +11,9 @@ The [quick start](quick-start.md) is the short version of this page.
   that group small.
 - Ports 80 and 443 free and reachable from the clients that use the proxy (and, for Let's Encrypt's HTTP
   challenge, from the internet on port 80).
-- Little disk: the services' data is small, but Nginx Proxy Manager's logs grow; watch the free space on small
-  boards.
+- Little disk: the services' data is small, but Nginx Proxy Manager's logs grow. It rotates them weekly and keeps
+  four compressed weeks, so a busy proxy can still write a gigabyte or more in a week; watch the free space on
+  small boards.
 - `PEANUT_CONFIG_PATH` owned by (or writable for) uid 1000: PeaNUT runs as that user and saves its login there.
 
 ## Where data lives
@@ -21,6 +22,7 @@ The [quick start](quick-start.md) is the short version of this page.
 | --- | --- | --- |
 | Nginx Proxy Manager's settings, proxy hosts and logs | directory `NPM_DATA_PATH` | `/data` |
 | Nginx Proxy Manager's certificates and private keys | directory `NPM_LETSENCRYPT_PATH` | `/etc/letsencrypt` |
+| When Nginx Proxy Manager last rotated its logs | volume `homelab-ares_npm-logrotate` (Compose creates it) | `/var/lib/logrotate` |
 | Uptime Kuma's database | volume `UPTIME_KUMA_VOLUME` | `/app/data` |
 | PeaNUT's settings (NUT server address and login) | directory `PEANUT_CONFIG_PATH` | `/config` |
 | Portainer's database | volume `PORTAINER_VOLUME` | `/data` |
