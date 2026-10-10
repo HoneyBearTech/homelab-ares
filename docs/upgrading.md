@@ -48,6 +48,23 @@ docker compose ps
 Then check each service's web UI and logs (`docker compose logs <service>`) for migration errors, and that a
 few proxied services still answer through the proxy.
 
+### Portainer and its agents
+
+Portainer's server (here) and the agents on the Docker hosts it manages are updated together, by hand: Dependabot's
+Portainer pull requests are never merged automatically. Upgrade the server first, then recreate each agent with the
+same version, pinned by tag and digest, keeping its usual options:
+
+```sh
+docker pull portainer/agent:X.Y.Z@sha256:<digest>
+docker stop portainer_agent && docker rm portainer_agent
+docker run -d --name portainer_agent --restart=always -p 9001:9001 \
+  -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker/volumes:/var/lib/docker/volumes \
+  portainer/agent:X.Y.Z@sha256:<digest>
+```
+
+An agent keeps no state of its own, so it reconnects to the server by itself; check that every environment shows
+as up in Portainer afterwards.
+
 ## Rolling back
 
 If a service fails after the upgrade, go back to the previous version **and** restore its data; a service whose

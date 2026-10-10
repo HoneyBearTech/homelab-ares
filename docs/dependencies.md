@@ -107,8 +107,8 @@ scan runs again. They're re-checked monthly.
 - **Uptime Kuma's remaining Debian packages** (Perl, GnuTLS, Expat, Python) and `cloudflared` (used only for a
   Cloudflare Tunnel, if one is configured in Uptime Kuma).
 - **Portainer's Go modules** (`buildkit`, `docker/cli`, `grpc`): Portainer's UI and API stay on the LAN behind its
-  login. Portainer is updated by hand together with its agents, so newer releases (2.45.x) are a planned change, not
-  an automatic one.
+  login. Portainer is updated by hand together with its agents ([upgrading.md](upgrading.md#portainer-and-its-agents));
+  it moved to the 2.45 long-term-support line in 0.2.4.
 
 **autoheal** (`willfarrell/autoheal`): its only maintained tag is `latest` (its versioned tags stop at 1.2.0 from
 2021), so it is pinned as `latest@sha256:…` with a policy exception; if Dependabot doesn't propose new digests for
