@@ -6,10 +6,15 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
-### Removed
+## [0.3.0] - 2026-10-10
 
-- Portainer's port 8000, the tunnel for Edge agents, is no longer published: its agents connect the standard way
-  (Portainer to the agent's port 9001), so nothing used it. Add it back only for an Edge agent.
+### Added
+
+- `.gitlab-ci.yml` for the copy of the repository on the maintainer's self-hosted GitLab. GitHub stays the
+  project's home and its Actions the required checks; on GitLab a scheduled job mirrors `main` and the tags from
+  GitHub (fast-forward only, with a project access token in a masked, protected CI/CD variable), and every
+  commit that arrives gets the checks that need no Docker daemon: ruff, yamllint, shellcheck, the unit tests
+  with the coverage floor, gitleaks over the whole history, actionlint and the Compose policy check.
 
 ### Changed
 
@@ -19,13 +24,10 @@ All notable changes to homelab-ares are documented here. The format follows
   the proxy network's gateway on Docker Desktop; services that trust the proxy by address (Home Assistant's
   `trusted_proxies`) are listed under what a backup doesn't bring back.
 
-### Added
+### Removed
 
-- `.gitlab-ci.yml` for the copy of the repository on the maintainer's self-hosted GitLab. GitHub stays the
-  project's home and its Actions the required checks; on GitLab a scheduled job mirrors `main` and the tags from
-  GitHub (fast-forward only, with a project access token in a masked, protected CI/CD variable), and every
-  commit that arrives gets the checks that need no Docker daemon: ruff, yamllint, shellcheck, the unit tests
-  with the coverage floor, gitleaks over the whole history, actionlint and the Compose policy check.
+- Portainer's port 8000, the tunnel for Edge agents, is no longer published: its agents connect the standard way
+  (Portainer to the agent's port 9001), so nothing used it. Add it back only for an Edge agent.
 
 ## [0.2.5] - 2026-10-10
 
@@ -176,7 +178,8 @@ The first release: the Ares stack as a Compose file, every image pinned by versi
   PeaNUT 6.0.0 (87 → 26, three critical issues in its web framework fixed); Portainer 2.39.8 (60 → 8). What's left,
   and why: [docs/dependencies.md](docs/dependencies.md#current-findings).
 
-[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.3.0
 [0.2.5]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.5
 [0.2.4]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.4
 [0.2.3]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.3
