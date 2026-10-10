@@ -6,6 +6,8 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-10-10
+
 ### Fixed
 
 - Nginx Proxy Manager rotates its logs weekly again after an upgrade. logrotate's record of the last rotation
@@ -22,6 +24,11 @@ All notable changes to homelab-ares are documented here. The format follows
   on the first start, one way: back up first.
 
 ## [0.2.3] - 2026-10-09
+
+**Correction (2026-10-10):** the `v0.2.3` tag points at a commit that also contains the Portainer 2.45.2 update
+released as 0.2.4: its `compose.yaml` and docs are the same as 0.2.4's, only this changelog differs. Deploying 0.2.3
+upgrades Portainer from 2.39.8 to 2.45.2 and migrates its database, one way; read 0.2.4's notes first, and prefer
+0.2.4. The release's signatures and provenance are valid; the tag can't be moved.
 
 ### Fixed
 
@@ -148,7 +155,8 @@ The first release: the Ares stack as a Compose file, every image pinned by versi
   PeaNUT 6.0.0 (87 → 26, three critical issues in its web framework fixed); Portainer 2.39.8 (60 → 8). What's left,
   and why: [docs/dependencies.md](docs/dependencies.md#current-findings).
 
-[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.5
 [0.2.4]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.4
 [0.2.3]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.3
 [0.2.2]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.2
