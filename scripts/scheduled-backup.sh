@@ -55,10 +55,12 @@ for key in BACKUP_KEEP BACKUP_REMOTE_KEEP; do
 done
 
 # Tell the push monitor how the run went; a monitor that hears nothing alerts on its own, so a failed ping is only
-# a warning. The URL Uptime Kuma shows may already carry a query string; it is replaced.
+# a warning. The URL Uptime Kuma shows may already carry a query string; it is replaced. Retried for two minutes:
+# when the monitor is this stack's own Uptime Kuma, the backup has just restarted it, and until it answers again the
+# proxy in front of it returns 502.
 ping_monitor() {
   if [ -z "$BACKUP_PING_URL" ]; then return 0; fi
-  curl --fail --silent --show-error --max-time 10 --retry 5 --retry-delay 5 --retry-all-errors --get \
+  curl --fail --silent --show-error --max-time 10 --retry 12 --retry-delay 10 --retry-all-errors --get \
     --data-urlencode "status=$1" --data-urlencode "msg=$2" "${BACKUP_PING_URL%%\?*}" >/dev/null ||
     echo "warning: couldn't reach the push monitor" >&2
 }

@@ -6,6 +6,12 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The scheduled backup's report to Uptime Kuma is retried for two minutes instead of 25 seconds. When the push
+  monitor is this stack's own Uptime Kuma, the backup has just restarted it, and the report failed with 502 until
+  it was answering again.
+
 ## [0.2.2] - 2026-10-09
 
 ### Added
