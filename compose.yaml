@@ -130,8 +130,9 @@ services:
       org.honeybeartech.ares.allow.docker-socket: >-
         Portainer's server manages Docker on this host through the socket (agreed by the owner 2026-10-07)
     ports:
+      # Its agents connect the standard way (Portainer to agent, port 9001); 8000, the tunnel for Edge agents, isn't
+      # published: add it back only for an Edge agent.
       - "9443:9443" # web UI (HTTPS): keep it on the LAN
-      - "8000:8000" # tunnel for Edge agents
     volumes:
       - portainer:/data
       - /var/run/docker.sock:/var/run/docker.sock

@@ -55,8 +55,7 @@ Only directories named like a backup (`<date>-<time>`) are ever deleted, here or
 | | | 81 → 81 | Admin UI (LAN only) |
 | `uptime-kuma` | `louislam/uptime-kuma` (slim) | 3001 → 3001 | Web UI and status pages; no "Real Browser" monitors (the slim image has no Chromium) |
 | `peanut` | `brandawg93/peanut` | 8080 → 8080 | Web UI, API and Prometheus metrics (`/api/v1/metrics`), behind PeaNUT's login (HTTP Basic auth works for scrapers); `/api/ping` is open |
-| `portainer` | `portainer/portainer-ce` (Alpine variant) | 9443 → 9443 | Web UI (HTTPS) |
-| | | 8000 → 8000 | Tunnel for Edge agents |
+| `portainer` | `portainer/portainer-ce` (Alpine variant) | 9443 → 9443 | Web UI (HTTPS). Agents connect the standard way; 8000, the tunnel for Edge agents, isn't published |
 | `autoheal` | `willfarrell/autoheal` | none | Restarts any labelled service whose health check fails |
 | `socket-proxy` | `lscr.io/linuxserver/socket-proxy` | none (internal network `docker-proxy`) | Filtered Docker API for autoheal |
 

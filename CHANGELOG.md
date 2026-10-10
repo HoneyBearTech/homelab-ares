@@ -6,6 +6,11 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- Portainer's port 8000, the tunnel for Edge agents, is no longer published: its agents connect the standard way
+  (Portainer to the agent's port 9001), so nothing used it. Add it back only for an Edge agent.
+
 ### Changed
 
 - [docs/rebuilding.md](docs/rebuilding.md#rehearsing-a-rebuild), from the first rehearsal: clear clashing container
