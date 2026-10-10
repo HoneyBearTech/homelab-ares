@@ -75,3 +75,4 @@ Nothing on the host updates itself: a version that runs is always a version that
 | `tests/` | The checker's tests, with JSON fixtures |
 | `docs/` | This documentation |
 | `.github/` | CI, release and security workflows, Dependabot, templates |
+| `.gitlab-ci.yml` | The pipeline of the copy on the maintainer's GitLab: mirrors GitHub, re-runs the daemon-free checks |

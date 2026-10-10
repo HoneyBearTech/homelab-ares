@@ -6,6 +6,14 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `.gitlab-ci.yml` for the copy of the repository on the maintainer's self-hosted GitLab. GitHub stays the
+  project's home and its Actions the required checks; on GitLab a scheduled job mirrors `main` and the tags from
+  GitHub (fast-forward only, with a project access token in a masked, protected CI/CD variable), and every
+  commit that arrives gets the checks that need no Docker daemon: ruff, yamllint, shellcheck, the unit tests
+  with the coverage floor, gitleaks over the whole history, actionlint and the Compose policy check.
+
 ## [0.2.5] - 2026-10-10
 
 ### Fixed

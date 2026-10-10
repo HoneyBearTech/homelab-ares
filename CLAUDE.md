@@ -82,6 +82,10 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   with a reason) and `ruff format`; yamllint (`.yamllint.yml`); shellcheck (`-x`); pytest + coverage (90 %
   branch floor); pip-tools for the hash-pinned `requirements-dev.txt`. CI-only: actionlint, gitleaks, CodeQL
   (python, actions), Scorecard, dependency review, DCO, Trivy image scan, Dependabot auto-merge (patch/minor).
+- GitLab copy: the owner's self-hosted GitLab (CE, LAN only; host facts in Chronos) holds a mirror. GitHub stays
+  the home (OpenSSF badges, Scorecard, Dependabot, releases); every change goes to GitHub as a PR, never to
+  GitLab. `.gitlab-ci.yml` mirrors GitHub on a schedule (fast-forward only, `MIRROR_TOKEN` CI/CD variable) and
+  re-runs the daemon-free checks; the smoke test stays GitHub-only (owner 2026-10-10, as on homelab-helios).
 - Releases (`release.yml`, on a `v*.*.*` tag): policy check, source archive, CycloneDX SBOM, `SHA256SUMS`
   signed with cosign keyless, SLSA provenance (Sigstore bundle + in-toto JSONL), GitHub Release from the
   tag's `CHANGELOG.md` section. No images are built or published. It refuses to run without `compose.yaml`.
