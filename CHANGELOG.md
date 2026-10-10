@@ -6,6 +6,8 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-10-09
+
 ### Changed
 
 - Portainer CE 2.45.2, the current long-term-support release (from 2.39.8). Its agents on other hosts move to 2.45.2
@@ -139,7 +141,8 @@ The first release: the Ares stack as a Compose file, every image pinned by versi
   PeaNUT 6.0.0 (87 → 26, three critical issues in its web framework fixed); Portainer 2.39.8 (60 → 8). What's left,
   and why: [docs/dependencies.md](docs/dependencies.md#current-findings).
 
-[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.4
 [0.2.3]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.3
 [0.2.2]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.2
 [0.2.1]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.1
