@@ -6,6 +6,13 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Nginx Proxy Manager rotates its logs weekly again after an upgrade. logrotate's record of the last rotation
+  lived in the container, so each new container started the week again and the logs kept growing. It now lives
+  in the volume `homelab-ares_npm-logrotate`, which Compose creates on the first `docker compose up`; there is no
+  new setting.
+
 ## [0.2.4] - 2026-10-09
 
 ### Changed

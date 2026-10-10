@@ -58,6 +58,9 @@ services:
     volumes:
       - ${NPM_DATA_PATH:?set NPM_DATA_PATH in .env}:/data
       - ${NPM_LETSENCRYPT_PATH:?set NPM_LETSENCRYPT_PATH in .env}:/etc/letsencrypt
+      # When logrotate last rotated each log: it rotates them weekly, and with this state in the container a new
+      # container (every upgrade) would start the week again.
+      - npm-logrotate:/var/lib/logrotate
     networks:
       - proxy
     healthcheck:
@@ -215,6 +218,8 @@ volumes:
     name: ${UPTIME_KUMA_VOLUME:?set UPTIME_KUMA_VOLUME in .env}
   portainer:
     name: ${PORTAINER_VOLUME:?set PORTAINER_VOLUME in .env}
+  # Nothing to adopt: Compose creates it as <project>_npm-logrotate.
+  npm-logrotate:
 
 networks:
   # The proxy's network is created once outside the stack (docs/installing.md), so it keeps its address range

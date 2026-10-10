@@ -149,7 +149,7 @@ Then remove everything the rehearsal created; it all holds secrets:
 
 ```sh
 . ./.env && docker compose down
-docker volume rm "$UPTIME_KUMA_VOLUME" "$PORTAINER_VOLUME"
+docker volume rm "$UPTIME_KUMA_VOLUME" "$PORTAINER_VOLUME" homelab-ares_npm-logrotate
 docker network rm "$PROXY_NETWORK"
 sudo rm -rf "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH" ~/restore .env ./*.env
 ```
