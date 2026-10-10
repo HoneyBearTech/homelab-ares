@@ -6,6 +6,14 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- [docs/rebuilding.md](docs/rebuilding.md#rehearsing-a-rebuild), from the first rehearsal: clear clashing container
+  names, ports and the proxy's address range on the scratch machine first; relay the copy through the live host;
+  pause Uptime Kuma's monitors before its first start (no false alerts); check sites behind an access list from
+  the proxy network's gateway on Docker Desktop; services that trust the proxy by address (Home Assistant's
+  `trusted_proxies`) are listed under what a backup doesn't bring back.
+
 ### Added
 
 - `.gitlab-ci.yml` for the copy of the repository on the maintainer's self-hosted GitLab. GitHub stays the
