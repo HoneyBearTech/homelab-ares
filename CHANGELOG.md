@@ -6,6 +6,12 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Portainer CE 2.45.2, the current long-term-support release (from 2.39.8). Its agents on other hosts move to 2.45.2
+  at the same time ([docs/upgrading.md](docs/upgrading.md#portainer-and-its-agents)). Portainer migrates its database
+  on the first start, one way: back up first.
+
 ## [0.2.3] - 2026-10-09
 
 ### Fixed

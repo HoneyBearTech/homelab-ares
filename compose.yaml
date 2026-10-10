@@ -117,7 +117,7 @@ services:
     <<: *defaults
     # The Alpine variant of the LTS release: it has a shell and wget for the health check (the default image has
     # neither). Updated by hand, together with the Portainer agents on the other hosts (not auto-merged).
-    image: portainer/portainer-ce:2.39.8-alpine@sha256:a0d04c9826efe13402e561589cbdf532d669671f62e40cc02dcd0b5211e4a9a5
+    image: portainer/portainer-ce:2.45.2-alpine@sha256:37aa2620d882794ed3e425b386db750f07500add53aa10adc741218b1e8d5782
     container_name: portainer
     read_only: true
     tmpfs:
