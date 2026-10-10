@@ -2,7 +2,8 @@
 # Back up the stack's state: every service's data mounts (each read-write volume or directory it mounts, such as
 # Nginx Proxy Manager's configuration and certificates or Uptime Kuma's database; never the Docker socket) and the
 # settings files. Each service is stopped only while its own archives are written, so its database is consistent,
-# and started again afterwards if it was running; services with nothing to archive keep running.
+# and started again afterwards if it was running; services with nothing to archive keep running. Entries a service's
+# label org.honeybeartech.ares.backup.exclude lists (such as Nginx Proxy Manager's logs) are left out.
 #
 #   scripts/backup.sh [DIR]      DIR defaults to backups/<date>-<time> in the checkout (gitignored)
 #
@@ -63,6 +64,7 @@ for service in "${services[@]}"; do
     fi
   done < <(data_mounts "$id")
   if [ ${#mounts[@]} -eq 0 ]; then continue; fi
+  excluded=$(backup_excludes "$id")
 
   case $'\n'"$running"$'\n' in
     *$'\n'"$service"$'\n'*)
@@ -74,11 +76,20 @@ for service in "${services[@]}"; do
   for entry in "${mounts[@]}"; do
     IFS=$'\t' read -r mount source <<<"$entry"
     archive=$(archive_name "$service" "$mount")
-    echo "Archiving $service $mount ($source)"
+    # Entries the service's label leaves out (such as the proxy's logs), as tar's --exclude patterns.
+    excludes=()
+    left_out=""
+    while IFS=$'\t' read -r excluded_mount name; do
+      if [ "$excluded_mount" = "$mount" ]; then
+        excludes+=(--exclude "./$name")
+        left_out="$left_out $name"
+      fi
+    done <<<"$excluded"
+    echo "Archiving $service $mount ($source)${left_out:+, leaving out$left_out}"
     # tar runs as root in the container so it can read every file; the archive itself is written by this shell,
     # so it belongs to the user running the backup.
-    docker run --rm --network none --volumes-from "$id:ro" "$busybox" tar -czf - -C "$mount" . \
-      </dev/null >"$dest/$archive"
+    docker run --rm --network none --volumes-from "$id:ro" "$busybox" \
+      tar -czf - "${excludes[@]+"${excludes[@]}"}" -C "$mount" . </dev/null >"$dest/$archive"
     printf '%s\t%s\t%s\t%s\t%s\n' "$archive" "$service" "$mount" "$source" "$image" >>"$dest/MANIFEST"
   done
   if [ -n "$stopped" ]; then

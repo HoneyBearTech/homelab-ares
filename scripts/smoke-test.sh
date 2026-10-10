@@ -171,7 +171,26 @@ else
     IFS=$'\t' read -r service mount <<<"$target"
     put_marker "$(compose ps --quiet "$service")" "$mount" backed-up
   done
+  # Entries a service leaves out of its backups (label org.honeybeartech.ares.backup.exclude) get a file of their
+  # own, which must be missing from the archive and still there after the restore.
+  excluded=()
+  for service in $(compose config --services); do
+    while IFS=$'\t' read -r mount name; do
+      if [ -n "$name" ]; then excluded+=("$service	$mount	$name"); fi
+    done <<<"$(backup_excludes "$(compose ps --all --quiet "$service")")"
+  done
+  for entry in "${excluded[@]+"${excluded[@]}"}"; do
+    IFS=$'\t' read -r service mount name <<<"$entry"
+    docker run --rm --network none --volumes-from "$(compose ps --quiet "$service")" "$busybox" \
+      sh -c 'mkdir -p "$1" && echo excluded >"$1/.smoke-excluded"' excluded "$mount/$name" </dev/null
+  done
   "$root/scripts/backup.sh" "$work/backup"
+  for entry in "${excluded[@]+"${excluded[@]}"}"; do
+    IFS=$'\t' read -r service mount name <<<"$entry"
+    if tar -tzf "$work/backup/$(archive_name "$service" "$mount")" | grep -Eq "^\./$name(/|$)"; then
+      fail "the backup of $service $mount includes $name, which its label leaves out"
+    fi
+  done
   for network in "${networks[@]+"${networks[@]}"}"; do
     grep -Eq "^$network"$'\t'"[0-9a-f.:]+/[0-9]+"$'\t' "$work/backup/NETWORKS" ||
       fail "the backup's NETWORKS doesn't record the address range of $network"
@@ -191,6 +210,12 @@ else
     check_marker "$(compose ps --all --quiet "$service")" "$mount" ||
       fail "$service $mount wasn't restored exactly (marker changed, or a file not in the backup was left)"
   done
+  for entry in "${excluded[@]+"${excluded[@]}"}"; do
+    IFS=$'\t' read -r service mount name <<<"$entry"
+    docker run --rm --network none --volumes-from "$(compose ps --all --quiet "$service"):ro" "$busybox" \
+      test -f "$mount/$name/.smoke-excluded" </dev/null || fail "restore.sh deleted $service $mount/$name"
+  done
+  echo "${#excluded[@]} excluded path(s) left out of the backup and kept by the restore"
   compose up --detach --wait --wait-timeout "$timeout"
   echo "Every data mount was restored, and every service is healthy again"
 fi

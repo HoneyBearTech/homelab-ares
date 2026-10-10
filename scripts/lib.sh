@@ -23,6 +23,32 @@ data_mounts() {
     done
 }
 
+# What container $1 leaves out of its backups, one "<mount><TAB><name>" per line: its label
+# org.honeybeartech.ares.backup.exclude lists container paths (separated by spaces), each an entry directly inside
+# one of its data mounts, such as /data/logs (mount /data, name logs). A backup doesn't archive them and a restore
+# leaves them as they are. Any other path is an error, so a typo can't quietly change what is backed up.
+backup_excludes() {
+  local value path mount name found mounts
+  local -a paths=()
+  value=$(docker inspect --format '{{index .Config.Labels "org.honeybeartech.ares.backup.exclude"}}' "$1")
+  read -r -a paths <<<"$value"
+  mounts=$(data_mounts "$1" | cut -f1)
+  for path in "${paths[@]+"${paths[@]}"}"; do
+    found=false
+    while IFS= read -r mount; do
+      name=${path#"$mount"/}
+      if [ -n "$mount" ] && [ "$name" != "$path" ] && [[ "$name" =~ ^[A-Za-z0-9_@-][A-Za-z0-9_.@-]*$ ]]; then
+        printf '%s\t%s\n' "$mount" "$name"
+        found=true
+      fi
+    done <<<"$mounts"
+    if ! $found; then
+      echo "error: org.honeybeartech.ares.backup.exclude: $path isn't an entry directly inside a data mount" >&2
+      return 1
+    fi
+  done
+}
+
 # Whether $2 is a directory in container $1 (a bind-mounted file isn't archived).
 is_dir() { docker run --rm --network none --volumes-from "$1:ro" "$busybox" test -d "$2" </dev/null; }
 

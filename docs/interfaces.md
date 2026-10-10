@@ -67,7 +67,7 @@ Exact versions and digests are in [`compose.yaml`](../compose.yaml).
 
 | Container path | Host source | Service |
 | --- | --- | --- |
-| `/data` | `NPM_DATA_PATH` | npm: settings database, proxy host configuration, logs |
+| `/data` | `NPM_DATA_PATH` | npm: settings database, proxy host configuration, logs (`/data/logs`, not backed up) |
 | `/etc/letsencrypt` | `NPM_LETSENCRYPT_PATH` | npm: TLS certificates and their private keys |
 | `/app/data` | volume `UPTIME_KUMA_VOLUME` | uptime-kuma: database |
 | `/config` | `PEANUT_CONFIG_PATH` | peanut: settings |
@@ -88,6 +88,7 @@ Exact versions and digests are in [`compose.yaml`](../compose.yaml).
 | --- | --- |
 | `org.honeybeartech.ares.allow.<rule>` | Lets one service break one policy rule; the value is the reason, and must not be empty. Rules: `image`, `digest`, `latest`, `build`, `privileged`, `no-new-privileges`, `cap-drop`, `cap-add`, `host-network`, `host-pid`, `docker-socket`, `healthcheck` ([security.md](security.md#policy)). In use: `portainer` and `socket-proxy` (`docker-socket`), `autoheal` (`latest`). |
 | `autoheal` | `"true"` on every service autoheal may restart when its health check fails: npm, uptime-kuma, peanut, portainer and socket-proxy. |
+| `org.honeybeartech.ares.backup.exclude` | Container paths (separated by spaces), each an entry directly inside one of the service's data mounts, that `scripts/backup.sh` leaves out and `scripts/restore.sh` leaves as they are. Any other path makes both fail. In use: npm (`/data/logs`). |
 
 ## Commands
 
@@ -97,7 +98,7 @@ Exact versions and digests are in [`compose.yaml`](../compose.yaml).
 | `make check` | `docker compose config --format json \| python scripts/check_compose.py`: the policy check |
 | `python scripts/check_compose.py [FILE] [--sbom OUT]` | Checks a resolved Compose config (from `FILE` or stdin); `--sbom` also writes a CycloneDX 1.6 SBOM of the images. Exit 0 = no violations, 1 = violations (one line each), 2 = unreadable input |
 | `make test`, `make lint` | The checker's tests and the linters |
-| `scripts/backup.sh [DIR]` | Archives every service's data mounts (every read-write volume or bind mount except the Docker socket and anonymous volumes), `.env` and any `<service>.env` into `DIR` (default `backups/<date>-<time>`, gitignored) with a `MANIFEST`, `NETWORKS` (the address range of each network the stack uses but doesn't create), `VERSION` (the checkout's `git describe`) and `SHA256SUMS`, all mode `600`. Each service is stopped only while its own mounts are archived and started again if it was running. Exit 0 = backup complete |
+| `scripts/backup.sh [DIR]` | Archives every service's data mounts (every read-write volume or bind mount except the Docker socket and anonymous volumes), `.env` and any `<service>.env` into `DIR` (default `backups/<date>-<time>`, gitignored) with a `MANIFEST`, `NETWORKS` (the address range of each network the stack uses but doesn't create), `VERSION` (the checkout's `git describe`) and `SHA256SUMS`, all mode `600`. Each service is stopped only while its own mounts are archived and started again if it was running. Leaves out the paths a service's `org.honeybeartech.ares.backup.exclude` label lists. Exit 0 = backup complete |
 | `scripts/scheduled-backup.sh` | Runs `scripts/backup.sh` into `BACKUP_DIR/<date>-<time>`, copies it to `BACKUP_REMOTE` with rsync (`SHA256SUMS` last), deletes all but the newest `BACKUP_REMOTE_KEEP` there and `BACKUP_KEEP` here, and reports to `BACKUP_PING_URL` ([`backup.env`](#backupenv)). Run nightly by the systemd user units in `deploy/systemd/`. Exit 0 = backup complete and copied |
 | `scripts/restore.sh [--yes] DIR [SERVICE...]` | Verifies `DIR/SHA256SUMS`, checks the `MANIFEST`, creates missing containers and volumes, asks for confirmation (unless `--yes`), stops the services, replaces the contents of each listed mount with its archive (owners and modes kept), and starts what was running. Writes only mounts the service still has read-write; never the Docker socket |
 | `make smoke` | `scripts/smoke-test.sh`: starts every service under a separate Compose project with throwaway directories, volumes and networks, no fixed container names, no published ports and no env files; waits until all are healthy, checks that Uptime Kuma can ping, round-trips a backup and restore over every data mount, runs the scheduled backup against a stand-in backup server, makes a test container unhealthy and checks that autoheal restarts it, then removes what it created. Exit 0 = all passed |

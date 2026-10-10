@@ -6,6 +6,18 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Label `org.honeybeartech.ares.backup.exclude`: container paths, each directly inside one of the service's data
+  mounts, that `scripts/backup.sh` leaves out and `scripts/restore.sh` leaves as they are. The smoke test checks
+  both.
+
+### Changed
+
+- Backups leave out Nginx Proxy Manager's logs (`/data/logs`). They grow without limit (hundreds of megabytes on a
+  long-running proxy), aren't needed to rebuild it, and kept the proxy down for half a minute or more while they
+  were archived; now it's down for seconds. A restore keeps the current logs.
+
 ## [0.2.1] - 2026-10-09
 
 ### Fixed
