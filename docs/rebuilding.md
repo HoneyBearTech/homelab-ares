@@ -138,7 +138,7 @@ Before you start, clear what would clash with the stack on the scratch machine, 
 
 - **Container names** are fixed (`nginxproxymanager`, `uptime-kuma`, `PeaNUT`, `portainer`, `autoheal`,
   `socket-proxy`): stop a container that already has one of them and `docker rename` it for the rehearsal.
-- **Ports** 80, 81, 443, 3001, 8000, 8080 and 9443 must be free.
+- **Ports** 80, 81, 443, 3001, 8080 and 9443 must be free.
 - **The proxy's address range** (in the backup's `NETWORKS`) must be free: `docker network ls -q | xargs docker
   network inspect --format '{{.Name}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'` shows what is taken.
 
