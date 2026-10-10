@@ -67,13 +67,23 @@ services=$(printf '%s\n' "${entries[@]}" | cut -f2 | sort -u)
 # shellcheck disable=SC2086 # one service name per word
 docker compose create --no-recreate $services
 
+# The entries each service leaves out of its backups (label org.honeybeartech.ares.backup.exclude) stay as they are.
+kept() {
+  local excluded excluded_mount name
+  excluded=$(backup_excludes "$1") || return 1
+  while IFS=$'\t' read -r excluded_mount name; do
+    if [ "$excluded_mount" = "$2" ]; then printf '%s\n' "$name"; fi
+  done <<<"$excluded"
+}
+
 echo "This replaces everything in:"
 for entry in "${entries[@]}"; do
   IFS=$'\t' read -r archive service mount <<<"$entry"
   id=$(docker compose ps --all --quiet "$service")
   source=$(data_mounts "$id" | awk -F '\t' -v m="$mount" '$1 == m { print $2 }')
   [ -n "$source" ] || fail "$service has no read-write mount at $mount any more (compose.yaml changed since the backup)"
-  echo "  $service $mount: $source"
+  keep=$(kept "$id" "$mount")
+  echo "  $service $mount: $source${keep:+ (except $(echo "$keep" | tr '\n' ' ' | sed 's/ $//'))}"
 done
 if ! $yes; then
   read -r -p "Type 'yes' to continue: " answer
@@ -101,8 +111,15 @@ for entry in "${entries[@]}"; do
   IFS=$'\t' read -r archive service mount <<<"$entry"
   id=$(docker compose ps --all --quiet "$service")
   echo "Restoring $service $mount"
+  # find's conditions for the entries to keep, as positional arguments: ! -path <mount>/<name> ! -path <mount>/<name>/*
+  keep=$(kept "$id" "$mount")
+  keep_args=()
+  while IFS= read -r name; do
+    if [ -n "$name" ]; then keep_args+=('!' -path "$mount/$name" '!' -path "$mount/$name/*"); fi
+  done <<<"$keep"
   # tar runs as root in the container, so files get back their original owners and modes.
   docker run --rm -i --network none --volumes-from "$id" "$busybox" \
-    sh -c 'find "$1" -mindepth 1 -delete && tar -xzf - -C "$1"' restore "$mount" <"$backup/$archive"
+    sh -c 'm=$1 && shift && find "$m" -mindepth 1 "$@" -delete && tar -xzf - -C "$m"' \
+    restore "$mount" "${keep_args[@]+"${keep_args[@]}"}" <"$backup/$archive"
 done
 echo "Restored. Services that weren't running before stay stopped: start them with 'docker compose up -d'."

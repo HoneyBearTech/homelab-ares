@@ -48,6 +48,9 @@ services:
       - NET_BIND_SERVICE # ports 80 and 443
     labels:
       autoheal: "true"
+      # Its logs grow without limit and aren't needed to rebuild it; left out, the proxy is down for seconds while
+      # it is backed up instead of half a minute or more (scripts/backup.sh).
+      org.honeybeartech.ares.backup.exclude: /data/logs
     ports:
       - "80:80" # proxied HTTP (and Let's Encrypt's HTTP challenge)
       - "443:443" # proxied HTTPS

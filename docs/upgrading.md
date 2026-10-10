@@ -17,7 +17,9 @@ anything you depend on.
 The state worth keeping is each service's data: every read-write volume or directory it mounts (the proxy's
 settings and certificates, Uptime Kuma's database, PeaNUT's settings, Portainer's database). `scripts/backup.sh`
 stops one service at a time, archives its mounts while it is stopped so its database is consistent, and starts it
-again if it was running; services with nothing to archive keep running. It also copies `.env` and any
+again if it was running; services with nothing to archive keep running. Nginx Proxy Manager's logs (`/data/logs`)
+are left out: they grow without limit, aren't needed to rebuild it, and would keep the proxy down for as long as
+they take to archive. A restore leaves the current logs as they are. It also copies `.env` and any
 `<service>.env` (such as `autoheal.env`):
 
 ```sh
