@@ -26,6 +26,7 @@ A new image or tool must:
 | Helper image for backups and the smoke test (busybox) | [`scripts/lib.sh`](../scripts/lib.sh) | version tag and digest | Docker |
 | Linters and scanners used only by CI (actionlint, gitleaks, Trivy) | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), [`scan.yml`](../.github/workflows/scan.yml) | version tag and digest | Docker |
 | GitHub Actions | [`.github/workflows/`](../.github/workflows/) | full commit SHA (version in a comment) | GitHub Actions |
+| Images of the GitLab copy's pipeline (Python, Docker CLI, git, gitleaks, actionlint) | [`.gitlab-ci.yml`](../.gitlab-ci.yml) | version tag and digest | GitLab Runner (Docker executor) |
 
 Each release carries a CycloneDX SBOM listing every service's image and digest
 ([verifying-releases.md](verifying-releases.md)). To update the pinned Python tools, edit
@@ -49,8 +50,8 @@ Each release carries a CycloneDX SBOM listing every service's image and digest
 - **Dependency review** ([`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml))
   blocks a pull request that adds or changes a Python or Actions dependency with a known vulnerability of
   moderate severity or higher, or a license outside the allowlist.
-- The CI-only images in `run:` steps and the scripts' busybox image aren't seen by Dependabot; they're bumped
-  by hand at least every quarter.
+- The CI-only images in `run:` steps, the images in `.gitlab-ci.yml` and the scripts' busybox image aren't seen
+  by Dependabot; they're bumped by hand at least every quarter.
 - **Nothing updates itself on the host.** Auto-updaters such as Watchtower are not used: they would run
   versions nobody reviewed.
 
