@@ -2,8 +2,11 @@
 
 The Docker Compose stack for Ares, the owner's homelab edge and monitoring server (Debian 13, arm64, bare metal):
 Nginx Proxy Manager, Uptime Kuma, PeaNUT and Portainer, plus autoheal behind a filtering socket proxy, every image
-pinned by tag and digest so the server can be upgraded and rebuilt from this repository. The services still run
-from their old setup on the host until the cutover (plan in Chronos).
+pinned by tag and digest so the server can be upgraded and rebuilt from this repository. Ares runs the stack from a
+checkout of a release tag (cut over 2026-10-09); its nightly backups go off the host. This repo is also the
+template for the other homelab stacks (homelab-atlas, -deimos, -helios, -hyperion): tooling that isn't specific to
+Ares' services (checker, backup scripts, smoke test, workflows) is kept the same across them, so a change here
+that isn't about Ares' own services is ported to them too, and vice versa.
 
 ## Before Making Structural Changes
 Read the project's notes first. They live outside this repo, in the owner's Obsidian vault **Chronos** at
@@ -45,7 +48,7 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   changes only on a deliberate pull.
 - **Arm64.** Ares is arm64: every image must publish `linux/arm64`. The smoke test runs on an arm64 runner and
   the image scan scans `linux/arm64`.
-- **No privileged containers, added capabilities, host network/PID or Docker socket mounts** unless the
+- **No privileged containers, added capabilities, host network/PID, Docker socket mounts or device mappings** unless the
   service carries `org.honeybeartech.ares.allow.<rule>: "<reason>"` and the owner agreed.
   `scripts/check_compose.py` enforces both rules in CI and in the release workflow. Exceptions in use (each agreed
   by the owner, 2026-10-07): `portainer` (`docker-socket`, read-write: Portainer manages Docker on this host),
@@ -63,9 +66,12 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
 - **Container paths and network identity are load-bearing**: the services store paths in their databases,
   and other systems reach Ares by its published ports and Nginx Proxy Manager's network. Adopt the existing
   volumes and keep paths, ports and networks the same; see the cutover plan in Chronos.
-- `scripts/backup.sh` archives every read-write volume or bind mount except the Docker socket and anonymous
-  volumes; `restore.sh` only writes mounts listed in the backup's MANIFEST that the service still mounts
-  read-write. Keep it that way when adding a service.
+- `scripts/backup.sh` archives every read-write volume or bind mount except the Docker socket, anonymous volumes
+  and the mounts a service's `org.honeybeartech.ares.backup.skip` label lists; paths inside a mount that its
+  `org.honeybeartech.ares.backup.exclude` label lists (npm's `/data/logs`) are left out of the archive. Each
+  service is stopped only while its data is copied; compression (pigz or gzip) runs after it starts again.
+  `restore.sh` only writes mounts listed in the backup's MANIFEST that the service still mounts read-write, never
+  a skipped mount, and leaves excluded paths and nested mounts in place. Keep it that way when adding a service.
 
 ## Stack
 - Docker Compose v2 (`compose.yaml`, 6 services), upstream images. Settings per path/volume/network in `.env`

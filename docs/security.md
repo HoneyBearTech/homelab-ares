@@ -44,6 +44,7 @@ non-empty reason:
 | `cap-add` | adds a capability outside Docker's default set (adding back one of those only narrows the default) |
 | `host-network` / `host-pid` | uses the host's network or PID namespace |
 | `docker-socket` | mounts the Docker socket |
+| `devices` | maps a host device into the container (a GPU reservation under `deploy.resources` is allowed) |
 | `healthcheck` | has no health check, or disables it (one defined only in the image isn't visible to the check) |
 
 ## Hardening

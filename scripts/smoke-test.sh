@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Smoke test of the stack: start every service in compose.yaml with throwaway settings, wait until each one reports
 # healthy, check that Uptime Kuma can ping (when the stack has it), then mark every data mount, take a backup, change
-# the data, restore the backup and check that the data and health came back, make a test container unhealthy and
-# check that autoheal restarts it (when the stack has autoheal), and remove everything it created. CI runs it on
-# every change; `make smoke` runs it locally.
+# the data, restore the backup and check that the data and health came back (and that mounts and paths excluded
+# from backups were neither archived nor overwritten), run the scheduled backup against a stand-in backup server,
+# make a test container unhealthy and check that autoheal restarts it (when the stack has autoheal), and remove
+# everything it created. CI runs it on every change; `make smoke` runs it locally.
 # Without a compose.yaml there is nothing to test, and it says so and passes.
 #
 # It stays away from any real installation on the same Docker host: its own Compose project, settings from
@@ -163,34 +164,39 @@ for service in $(compose config --services); do
     if is_dir "$id" "$mount"; then targets+=("$service	$mount"); fi
   done < <(data_mounts "$id")
 done
+# Every directory a service excludes from backups (its backup.skip label): never archived, never overwritten.
+skipped=()
+for service in $(compose config --services); do
+  id=$(compose ps --all --quiet "$service")
+  while IFS= read -r mount; do
+    if is_dir "$id" "$mount"; then skipped+=("$service	$mount"); fi
+  done < <(skipped_mounts "$id")
+done
+# Every path a service leaves out of a mount's archive (its backup.exclude label): not archived, not deleted.
+excluded=()
+for service in $(compose config --services); do
+  id=$(compose ps --all --quiet "$service")
+  while IFS= read -r path; do excluded+=("$service	$path"); done < <(label_paths "$id" "$exclude_label")
+done
 if [ ${#targets[@]} -eq 0 ]; then
   echo "No service has a data mount; skipping the backup and restore round trip"
 else
+  for target in "${skipped[@]+"${skipped[@]}"}"; do
+    IFS=$'\t' read -r service mount <<<"$target"
+    docker run --rm --network none --volumes-from "$(compose ps --quiet "$service")" "$busybox" \
+      sh -c 'echo kept >"$1/.smoke-skipped"' mark "$mount" </dev/null
+  done
+  for entry in "${excluded[@]+"${excluded[@]}"}"; do
+    IFS=$'\t' read -r service path <<<"$entry"
+    docker run --rm --network none --volumes-from "$(compose ps --quiet "$service")" "$busybox" \
+      sh -c 'mkdir -p "$1" && echo kept >"$1/.smoke-excluded"' mark "$path" </dev/null
+  done
   echo "Backup and restore round trip over ${#targets[@]} data mount(s)"
   for target in "${targets[@]}"; do
     IFS=$'\t' read -r service mount <<<"$target"
     put_marker "$(compose ps --quiet "$service")" "$mount" backed-up
   done
-  # Entries a service leaves out of its backups (label org.honeybeartech.ares.backup.exclude) get a file of their
-  # own, which must be missing from the archive and still there after the restore.
-  excluded=()
-  for service in $(compose config --services); do
-    while IFS=$'\t' read -r mount name; do
-      if [ -n "$name" ]; then excluded+=("$service	$mount	$name"); fi
-    done <<<"$(backup_excludes "$(compose ps --all --quiet "$service")")"
-  done
-  for entry in "${excluded[@]+"${excluded[@]}"}"; do
-    IFS=$'\t' read -r service mount name <<<"$entry"
-    docker run --rm --network none --volumes-from "$(compose ps --quiet "$service")" "$busybox" \
-      sh -c 'mkdir -p "$1" && echo excluded >"$1/.smoke-excluded"' excluded "$mount/$name" </dev/null
-  done
   "$root/scripts/backup.sh" "$work/backup"
-  for entry in "${excluded[@]+"${excluded[@]}"}"; do
-    IFS=$'\t' read -r service mount name <<<"$entry"
-    if tar -tzf "$work/backup/$(archive_name "$service" "$mount")" | grep -Eq "^\./$name(/|$)"; then
-      fail "the backup of $service $mount includes $name, which its label leaves out"
-    fi
-  done
   for network in "${networks[@]+"${networks[@]}"}"; do
     grep -Eq "^$network"$'\t'"[0-9a-f.:]+/[0-9]+"$'\t' "$work/backup/NETWORKS" ||
       fail "the backup's NETWORKS doesn't record the address range of $network"
@@ -204,18 +210,36 @@ else
     put_marker "$(compose ps --quiet "$service")" "$mount" changed
   done
   "$root/scripts/restore.sh" --yes "$work/backup"
+  for target in "${skipped[@]+"${skipped[@]}"}"; do
+    IFS=$'\t' read -r service mount <<<"$target"
+    if awk -F '\t' -v s="$service" -v m="$mount" '$2 == s && $3 == m { found = 1 } END { exit !found }' \
+      "$work/backup/MANIFEST"; then
+      fail "$service $mount is excluded from backups but was archived"
+    fi
+    docker run --rm --network none --volumes-from "$(compose ps --all --quiet "$service"):ro" "$busybox" \
+      sh -c 'test "$(cat "$1/.smoke-skipped")" = kept' check "$mount" </dev/null ||
+      fail "$service $mount is excluded from backups but restore.sh touched it"
+  done
+  if [ ${#skipped[@]} -gt 0 ]; then echo "${#skipped[@]} excluded mount(s) were neither archived nor overwritten"; fi
+  for entry in "${excluded[@]+"${excluded[@]}"}"; do
+    IFS=$'\t' read -r service path <<<"$entry"
+    while IFS=$'\t' read -r archive s mount _; do
+      if [ "$s" = "$service" ] && [[ "$path" == "$mount"/* ]] &&
+        grep -qF -- "./${path#"$mount"/}/" <(tar -tzf "$work/backup/$archive"); then
+        fail "$service $path is left out of backups but is in $archive"
+      fi
+    done <"$work/backup/MANIFEST"
+    docker run --rm --network none --volumes-from "$(compose ps --all --quiet "$service"):ro" "$busybox" \
+      sh -c 'test "$(cat "$1/.smoke-excluded")" = kept' check "$path" </dev/null ||
+      fail "$service $path is left out of backups but restore.sh deleted it"
+  done
+  if [ ${#excluded[@]} -gt 0 ]; then echo "${#excluded[@]} left-out path(s) were neither archived nor deleted"; fi
 
   for target in "${targets[@]}"; do
     IFS=$'\t' read -r service mount <<<"$target"
     check_marker "$(compose ps --all --quiet "$service")" "$mount" ||
       fail "$service $mount wasn't restored exactly (marker changed, or a file not in the backup was left)"
   done
-  for entry in "${excluded[@]+"${excluded[@]}"}"; do
-    IFS=$'\t' read -r service mount name <<<"$entry"
-    docker run --rm --network none --volumes-from "$(compose ps --all --quiet "$service"):ro" "$busybox" \
-      test -f "$mount/$name/.smoke-excluded" </dev/null || fail "restore.sh deleted $service $mount/$name"
-  done
-  echo "${#excluded[@]} excluded path(s) left out of the backup and kept by the restore"
   compose up --detach --wait --wait-timeout "$timeout"
   echo "Every data mount was restored, and every service is healthy again"
 fi

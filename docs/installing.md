@@ -72,11 +72,12 @@ login and private key: copy them only to a machine you trust as much as this one
    copy of it made on the server after the nightly backup (on a Synology without Btrfs, a Hyper Backup task with
    rotation, into a folder the backup user has no access to). A recycle bin isn't enough: Synology's doesn't keep
    files deleted over rsync.
-2. **On this host**, as the user who runs the stack, install rsync and curl, and create a key used only for the
-   backups, with an alias for it in `~/.ssh/config`:
+2. **On this host**, as the user who runs the stack, install rsync and curl (and pigz, which compresses the
+   archives on every core instead of one), and create a key used only for the backups, with an alias for it in
+   `~/.ssh/config`:
 
    ```sh
-   sudo apt install -y rsync curl
+   sudo apt install -y rsync curl pigz
    ssh-keygen -t ed25519 -N '' -f ~/.ssh/homelab-ares-backup
    ```
 
