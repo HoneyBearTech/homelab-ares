@@ -6,6 +6,28 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Label `org.honeybeartech.ares.backup.skip`: container paths a backup never archives and a restore refuses to
+  write (a media library or a cache, for example). No service uses it yet.
+- Policy rule `devices` (from homelab-deimos): no host device mapped into a container (a GPU reservation under
+  `deploy.resources` is allowed). No service maps one.
+
+### Changed
+
+- `scripts/backup.sh` stops each service only while its data is copied, and compresses the copies after starting
+  it again, with `pigz` on every core when it's installed (else `gzip`): the services are down for a shorter time.
+  Services that Compose stopped along with the one being backed up are started again too, and the copy runs
+  without a log driver, so Docker no longer writes the whole archive into the copying container's log.
+- `org.honeybeartech.ares.backup.exclude` takes comma-separated paths at any depth inside a data mount (it was
+  entries directly inside one, separated by spaces). npm's `/data/logs` stays as it is. A path outside every data
+  mount, or with `..` or a pattern character, still fails the backup and the restore before anything stops.
+- A mount inside another mount is archived on its own and left out of the outer mount's archive, and a restore of
+  the outer mount leaves it in place.
+- The nightly backup runs in the best-effort I/O class at the lowest priority instead of the idle class, which
+  could keep a stopped service waiting behind every other disk user on the host. Re-install the systemd units
+  after upgrading (`docs/installing.md#scheduled-backups`).
+
 ## [0.3.0] - 2026-10-10
 
 ### Added

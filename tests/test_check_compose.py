@@ -54,12 +54,26 @@ def test_every_rule_is_reported_exactly() -> None:
         ("partial-drop", "cap-drop"),
         ("hostnet", "host-network"),
         ("hostpid", "host-pid"),
+        ("devices", "devices"),
         ("socket", "docker-socket"),
         ("no-healthcheck", "healthcheck"),
         ("healthcheck-disabled", "healthcheck"),
         ("healthcheck-none", "healthcheck"),
         ("healthcheck-timing-only", "healthcheck"),
     }
+
+
+def test_gpu_reservation_is_not_a_device_mapping() -> None:
+    gpu = {"devices": [{"driver": "nvidia", "count": -1, "capabilities": [["gpu"]]}]}
+    service = {
+        "image": "ghcr.io/haveagitgat/tdarr:2.86.01@sha256:" + "a" * 64,
+        "deploy": {"resources": {"reservations": gpu}},
+        **HARDENED,
+    }
+    assert cc.check({"services": {"tdarr": service}}) == []
+    service["labels"] = {cc.ALLOW_LABEL + "devices": "needs the render node"}
+    service["devices"] = ["/dev/dri:/dev/dri"]
+    assert cc.check({"services": {"tdarr": service}}) == []
 
 
 def test_allow_label_needs_a_reason() -> None:
