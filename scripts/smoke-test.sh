@@ -118,7 +118,8 @@ YAML
 } >"$work/override.yaml"
 
 compose config --quiet
-echo "Starting $(compose config --services | wc -l | tr -d ' ') services, waiting up to ${timeout}s for them to be healthy"
+echo "Starting $(compose config --services | wc -l | tr -d ' ') services," \
+  "waiting up to ${timeout}s for them to be healthy"
 # One retry: a service that fetches something from the internet as it starts can fail on the network, not the
 # stack. A service that is really broken fails both attempts.
 if ! compose up --detach --quiet-pull --wait --wait-timeout "$timeout"; then
@@ -201,6 +202,8 @@ else
     grep -Eq "^$network"$'\t'"[0-9a-f.:]+/[0-9]+"$'\t' "$work/backup/NETWORKS" ||
       fail "the backup's NETWORKS doesn't record the address range of $network"
   done
+  # NETWORKS is written even when the stack joins no network it doesn't create (then it has only its header).
+  [ -f "$work/backup/NETWORKS" ] || fail "the backup has no NETWORKS"
   [ -s "$work/backup/VERSION" ] || fail "the backup has no VERSION"
   [ "$(compose ps --services --status running | wc -l)" -eq "$(compose config --services | wc -l)" ] ||
     fail "backup.sh didn't start every service again"
