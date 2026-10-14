@@ -57,7 +57,7 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   owner agreeing.
 - **Every service has a health check and the `autoheal: "true"` label** (except autoheal itself). autoheal must
   never get the socket itself, only `tcp://socket-proxy:2375`.
-- **Never change the live server** (Ares) without the owner asking: no merge (a merge deploys), no
+- **Never change the live server** (Ares) without the owner asking: merges only as **Merging** says, no
   `docker compose up`, no edits to service data, Portainer stacks or Nginx Proxy Manager's proxy hosts. Ares fronts
   every other service in the homelab, so a mistake there takes everything down. Read-only inspection (`docker ps`,
   `docker inspect`) only when asked.
@@ -117,8 +117,11 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
 - `CI / Checks + tests` and `CI / Stack smoke test` are required checks (with DCO sign-off, Dependency review and
   CodeQL's Analyze (python) / Analyze (actions)) in the `main` ruleset; don't rename those jobs.
 - **Merging (owner's decisions 2026-10-07 and 2026-10-14):** Claude opens a PR for every change. A merge deploys
-  (see Deploys), so Claude never merges and never turns on auto-merge (`gh pr merge --auto`) for a PR without the
-  owner's OK for that PR, and says in the question that merging deploys to Ares. Never bypass a check or the
+  (see Deploys), so Claude merges once every required check is green (the owner's standing permission, 2026-10-14) and
+  then says that it merged and that it's deploying to Ares. It asks first when the deploy needs something on
+  the server (a new `.env` setting, a data migration without a recent good backup, an update this file says
+  waits for the owner) or the server isn't healthy, and never turns on auto-merge (`gh pr merge --auto`)
+  without the owner's OK. Never bypass a check or the
   ruleset. Dependabot's patch and minor updates and image rebuilds still auto-merge through
   `dependabot-auto-merge.yml` once every required check passes, so they now deploy unattended; majors and every
   Portainer update wait for the owner. Keeping that auto-merge is the owner's call: don't change
