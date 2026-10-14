@@ -42,6 +42,9 @@ Each release carries a CycloneDX SBOM listing every service's image and digest
   images, the Python tools and the GitHub Actions, they're squash-merged once every required check has passed
   (CI with the Compose policy check and the smoke test, CodeQL, dependency review). Nothing skips a check, and
   a failing update stays open for the maintainer.
+- **Image rebuilds merge automatically too**: a pull request that only moves an image to a new digest under the
+  same tag (a rebuild of the same app version, with newer base packages) and changes nothing else in `compose.yaml`.
+  Portainer's rebuilds wait, like its version updates.
 - **Major updates are merged by hand**, after reading the service's release notes: a new major version can
   migrate its data one way. So is any update Dependabot can't classify as patch, minor or major, and every
   Portainer update: its server and the agents on the other hosts move together.

@@ -15,6 +15,10 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Changed
 
+- Dependabot's image rebuilds (the same tag moving to a new digest: a rebuild of the same app version, with newer
+  base packages) now merge automatically once every required check passes, as on homelab-atlas. The rule merges only
+  a pull request whose one changed file is `compose.yaml`, whose changed lines are all `image:` lines, and whose
+  image tags stay the same. Portainer's rebuilds wait, like its version updates.
 - `scripts/backup.sh` stops each service only while its data is copied, and compresses the copies after starting
   it again, with `pigz` on every core when it's installed (else `gzip`): the services are down for a shorter time.
   Services that Compose stopped along with the one being backed up are started again too, and the copy runs
@@ -27,6 +31,7 @@ All notable changes to homelab-ares are documented here. The format follows
 - The nightly backup runs in the best-effort I/O class at the lowest priority instead of the idle class, which
   could keep a stopped service waiting behind every other disk user on the host. Re-install the systemd units
   after upgrading (`docs/installing.md#scheduled-backups`).
+
 
 ## [0.3.0] - 2026-10-10
 

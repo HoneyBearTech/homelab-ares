@@ -42,10 +42,10 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
 
 ## Rules for the stack
 - **Every image is pinned as `name:tag@sha256:<digest>`.** Never `latest`, never tag-only. Dependabot
-  (`docker-compose` ecosystem) updates tag and digest together. Patch and minor updates are auto-merged once
-  the required checks pass (`dependabot-auto-merge.yml`); major updates wait for the owner, and so does every
-  Portainer update (server and agents move together; owner's decision 2026-10-07). A merge never deploys: Ares
-  changes only on a deliberate pull.
+  (`docker-compose` ecosystem) updates tag and digest together. Patch and minor updates, and image rebuilds (same
+  tag, new digest; owner 2026-10-14), are auto-merged once the required checks pass (`dependabot-auto-merge.yml`);
+  major updates wait for the owner, and so does every Portainer update (server and agents move together; owner's
+  decision 2026-10-07). A merge never deploys: Ares changes only on a deliberate pull.
 - **Arm64.** Ares is arm64: every image must publish `linux/arm64`. The smoke test runs on an arm64 runner and
   the image scan scans `linux/arm64`.
 - **No privileged containers, added capabilities, host network/PID, Docker socket mounts or device mappings** unless the
@@ -87,7 +87,7 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
 - Tooling: ruff with every rule family (`select = ["ALL"]`, exceptions in `pyproject.toml`; per-line `noqa`
   with a reason) and `ruff format`; yamllint (`.yamllint.yml`); shellcheck (`-x`); pytest + coverage (90 %
   branch floor); pip-tools for the hash-pinned `requirements-dev.txt`. CI-only: actionlint, gitleaks, CodeQL
-  (python, actions), Scorecard, dependency review, DCO, Trivy image scan, Dependabot auto-merge (patch/minor).
+  (python, actions), Scorecard, dependency review, DCO, Trivy image scan, Dependabot auto-merge (patch/minor, rebuilds).
 - GitLab copy: the owner's self-hosted GitLab (CE, LAN only; host facts in Chronos) holds a mirror. GitHub stays
   the home (OpenSSF badges, Scorecard, Dependabot, releases); every change goes to GitHub as a PR, never to
   GitLab. `.gitlab-ci.yml` mirrors GitHub on a schedule (fast-forward only, `MIRROR_TOKEN` CI/CD variable) and
