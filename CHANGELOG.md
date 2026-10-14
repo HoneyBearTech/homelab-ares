@@ -6,6 +6,8 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
 ### Added
 
 - Label `org.honeybeartech.ares.backup.skip`: container paths a backup never archives and a restore refuses to
@@ -31,7 +33,6 @@ All notable changes to homelab-ares are documented here. The format follows
 - The nightly backup runs in the best-effort I/O class at the lowest priority instead of the idle class, which
   could keep a stopped service waiting behind every other disk user on the host. Re-install the systemd units
   after upgrading (`docs/installing.md#scheduled-backups`).
-
 
 ## [0.3.0] - 2026-10-10
 
@@ -205,7 +206,8 @@ The first release: the Ares stack as a Compose file, every image pinned by versi
   PeaNUT 6.0.0 (87 → 26, three critical issues in its web framework fixed); Portainer 2.39.8 (60 → 8). What's left,
   and why: [docs/dependencies.md](docs/dependencies.md#current-findings).
 
-[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/HoneyBearTech/homelab-ares/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.3.0
 [0.2.5]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.5
 [0.2.4]: https://github.com/HoneyBearTech/homelab-ares/releases/tag/v0.2.4
