@@ -10,8 +10,9 @@ proxy.
    git clone https://github.com/HoneyBearTech/homelab-ares.git && cd homelab-ares
    ```
 
-   Once releases exist, check out the latest one (`git checkout vX.Y.Z`) and verify it first
-   ([verifying-releases.md](verifying-releases.md)).
+   Check out the latest release (`git checkout vX.Y.Z`) and verify it first
+   ([verifying-releases.md](verifying-releases.md)), or stay on `main` the way the maintainer's server does
+   ([upgrading.md](upgrading.md#following-main)).
 
 2. **Configure it.**
 

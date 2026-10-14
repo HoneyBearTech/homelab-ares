@@ -79,6 +79,10 @@ itself ([dependencies.md](dependencies.md#tracking-dependencies)).
 - The agent only fast-forwards: it refuses a checkout with local changes or a `main` whose history was rewritten.
   If the configuration doesn't resolve or an image can't be pulled, it moves the checkout back, so the server keeps
   running what it ran.
+- **Backups and deploys take turns.** `scripts/backup.sh` and `scripts/restore.sh` hold the agent's lock while
+  they run, and wait for a deploy in progress to finish before they stop anything, so the nightly backup never
+  races a merge; the agent deploys on its first run after they finish
+  ([Deploy lock](installing.md#deploy-lock)).
 - **The merge is the upgrade.** Major versions merge by themselves too, so an update that migrates a service's
   data one way can arrive unattended; read its release notes when it lands, and restore from the nightly
   [scheduled backup](installing.md#scheduled-backups) if it breaks. Before merging an update by hand (every

@@ -85,6 +85,11 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   `scripts/restore.sh` are the way back, with the owner.
 - **Pinning by hand**: the owner checks out another commit or tag on the host; the agent pauses until the checkout
   is on `main` again. Release tags stay as signed, verified snapshots; they no longer drive deploys.
+- **Backups and deploys take turns**: `deploy_lock` in `scripts/lib.sh` (called right after lib.sh is sourced, before
+  anything stops) makes backup.sh and restore.sh wait for a running deploy (up to `deploy_lock_timeout`, 1800 s) and
+  hold the agent's lock (`flock` on `<agent state root>/ares/lock`, fd 9; the agent's `flock --nonblock` skips busy
+  runs); a no-op where that directory doesn't exist. Other stacks copy it with only `pull_stack` changed; tested in
+  `tests/test_deploy_lock.py` (a Python `fcntl.flock` plays the agent; the real-flock cases skip on macOS).
 - Ares fronts every other service in the homelab: a bad merge here takes all of them offline within minutes.
 
 ## Stack

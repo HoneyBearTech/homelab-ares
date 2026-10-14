@@ -69,9 +69,9 @@ weekly scan of the pinned digests ([`scan.yml`](../.github/workflows/scan.yml): 
 findings that have a fix, for `linux/arm64`, reported to code scanning with one category per image). Each
 finding is triaged within 14 days:
 
-1. **If a fixed version exists**, bump to it (a Dependabot pull request usually already does) and release.
-   A fix for an exploitable critical or high-severity vulnerability goes out in a patch release within 30
-   days; others go out with the next release.
+1. **If a fixed version exists**, bump to it (a Dependabot pull request usually already does; the merge deploys
+   it to the maintainer's server) and release it for those who run releases. A fix for an exploitable critical or
+   high-severity vulnerability goes out in a patch release within 30 days; others go out with the next release.
 2. **If upstream hasn't released a fix**, assess whether it's reachable in this stack (which ports are
    published, and above all whether it's reachable through the proxy from the internet). If it is, mitigate it
    where possible (for example, an access list or not publishing a port) and say so in the release notes;

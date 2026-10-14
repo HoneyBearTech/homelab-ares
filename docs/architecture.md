@@ -62,6 +62,8 @@ Each service keeps its settings and database in its own data directory or volume
 4. Within about 90 seconds the pull agent on the host sees `main` move, fast-forwards its checkout and runs
    `docker compose pull && docker compose up -d --remove-orphans --wait`
    ([upgrading.md](upgrading.md#following-main)). A rollback is a revert pull request, deployed the same way.
+   Backups and restores share the agent's lock, so a deploy never starts while they have a service stopped
+   ([deploy lock](installing.md#deploy-lock)).
 5. A version tag makes a signed release: a named, verifiable snapshot of `main`.
 
 Nothing updates from a registry by itself: a version that runs is always a version that's in `main`. The host

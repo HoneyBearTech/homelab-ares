@@ -21,6 +21,8 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 # shellcheck source=scripts/lib.sh
 . "$root/scripts/lib.sh"
 cd "$root"
+# Before anything stops: waits for a running deploy, then keeps the pull agent from deploying until this exits.
+deploy_lock
 dest=${1:-backups/$(date +%Y%m%d-%H%M%S)}
 # pigz compresses on every core; gzip on one is several times slower on large archives.
 compress=$(command -v pigz || command -v gzip)
