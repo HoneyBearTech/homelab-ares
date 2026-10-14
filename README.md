@@ -41,7 +41,9 @@ Docker Compose stack for Ares, a homelab Debian 13 (arm64) server. Version-pinne
   inspect, restart and stop containers
 
 Every service has a health check, and every image is pinned by tag **and** digest, for `linux/arm64`. New versions arrive as Dependabot pull
-requests that CI checks and the maintainer merges; nothing on the host updates itself. Metrics dashboards
+requests that CI checks before they're merged. The maintainer's server follows `main`: a pull agent there applies
+each merge within a couple of minutes ([upgrading](docs/upgrading.md#following-main)). Nothing updates from a
+registry tag by itself: what runs is always a commit in `main`. Metrics dashboards
 (Grafana, Prometheus) are a separate project and not part of this stack.
 
 ## Getting started
@@ -65,7 +67,8 @@ make check                        # policy check: every image pinned, nothing pr
 scripts/backup.sh                 # back up every service's data (stops each service briefly)
 ```
 
-Upgrading to a new release: [docs/upgrading.md](docs/upgrading.md).
+Upgrading to a new release, or following `main` the way the maintainer's server does:
+[docs/upgrading.md](docs/upgrading.md).
 
 ## Configuration
 
@@ -97,7 +100,8 @@ Ports, volumes and labels: [docs/interfaces.md](docs/interfaces.md).
   that only lets it list, inspect, restart and stop containers.
 - Secrets (logins, API tokens, TLS private keys, the NUT login) live only in each service's data, never in this
   repository or `.env`. Backups contain them: keep them private and off the host.
-- Don't run an auto-updater such as Watchtower on these containers; upgrade by release instead.
+- Don't run an auto-updater such as Watchtower on these containers; upgrade from this repository instead (a
+  release, or `main`).
 - The policy check refuses privileged containers, added capabilities, host networking and Docker socket
   mounts unless a service documents why ([docs/security.md](docs/security.md)).
 

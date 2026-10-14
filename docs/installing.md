@@ -55,7 +55,8 @@ the stack at their existing data instead of starting empty:
 - **PeaNUT 6** asks for a login on first start if its settings have none yet, and its metrics then need that login:
   update whatever scrapes them. Change the owner of its settings directory to uid 1000 first.
 
-Running `main` instead of a release is possible but unsupported for anything you depend on.
+The maintainer's server runs `main` rather than a release, and deploys every merge by itself
+([upgrading.md](upgrading.md#following-main)). For your own setup, a release is the safer choice.
 
 ## Scheduled backups
 
