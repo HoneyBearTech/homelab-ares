@@ -45,7 +45,10 @@ services:
       - SETUID
       - SETGID
       - KILL
-      - NET_BIND_SERVICE # ports 80 and 443
+      # Ports 80 and 443. Not strictly needed (tested 2026-10-13): Docker lets any process in a container bind a low
+      # port (ip_unprivileged_port_start=0). Kept so the proxy, which fronts every service, doesn't depend on that
+      # default; it adds nothing a process in the container couldn't already do.
+      - NET_BIND_SERVICE
     labels:
       autoheal: "true"
       # Its logs grow without limit and aren't needed to rebuild it; left out, the proxy is down for seconds while
