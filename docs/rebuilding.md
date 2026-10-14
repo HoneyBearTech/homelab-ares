@@ -67,6 +67,9 @@ git checkout vX.Y.Z      # the release in VERSION, or newer; verify it (verifyin
 cp ~/restore/env/.env .env && chmod 600 .env
 ```
 
+A server that follows `main` ([upgrading.md](upgrading.md#following-main)) stays on `main` here instead
+(skip the `git checkout`), and gets its pull agent back once the stack is healthy.
+
 Copy any other file from the backup's `env/` (such as `autoheal.env` and `backup.env`) the same way (mode `600`).
 Edit `.env` if the new host's paths differ; keep the volume names, since the restore creates volumes under them.
 Create the data directories as your user:

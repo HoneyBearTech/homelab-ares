@@ -6,6 +6,13 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Docs: the maintainer's server now follows `main` with a pull agent instead of running a release tag, so a merge
+  deploys within about two minutes, Dependabot's automatic merges included. Rollback is a revert pull request; a
+  server is held on a version by checking out that commit, which pauses the agent. Release tags stay as signed,
+  verified snapshots ([docs/upgrading.md](docs/upgrading.md#following-main)).
+
 ## [0.4.0] - 2026-10-14
 
 ### Added

@@ -3,10 +3,10 @@
 The Docker Compose stack for Ares, the owner's homelab edge and monitoring server (Debian 13, arm64, bare metal):
 Nginx Proxy Manager, Uptime Kuma, PeaNUT and Portainer, plus autoheal behind a filtering socket proxy, every image
 pinned by tag and digest so the server can be upgraded and rebuilt from this repository. Ares runs the stack from a
-checkout of a release tag (cut over 2026-10-09); its nightly backups go off the host. This repo is also the
-template for the other homelab stacks (homelab-atlas, -deimos, -helios, -hyperion): tooling that isn't specific to
-Ares' services (checker, backup scripts, smoke test, workflows) is kept the same across them, so a change here
-that isn't about Ares' own services is ported to them too, and vice versa.
+checkout of `main` that a pull agent deploys (see Deploys below); its nightly backups go off the host. This repo is
+also the template for the other homelab stacks (homelab-atlas, -deimos, -helios, -hyperion): tooling that isn't
+specific to Ares' services (checker, backup scripts, smoke test, workflows) is kept the same across them, so a change
+here that isn't about Ares' own services is ported to them too, and vice versa.
 
 ## Before Making Structural Changes
 Read the project's notes first. They live outside this repo, in the owner's Obsidian vault **Chronos** at
@@ -45,7 +45,7 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   (`docker-compose` ecosystem) updates tag and digest together. Patch and minor updates, and image rebuilds (same
   tag, new digest; owner 2026-10-14), are auto-merged once the required checks pass (`dependabot-auto-merge.yml`);
   major updates wait for the owner, and so does every Portainer update (server and agents move together; owner's
-  decision 2026-10-07). A merge never deploys: Ares changes only on a deliberate pull.
+  decision 2026-10-07). Every merge deploys, the automatic ones included (see Deploys).
 - **Arm64.** Ares is arm64: every image must publish `linux/arm64`. The smoke test runs on an arm64 runner and
   the image scan scans `linux/arm64`.
 - **No privileged containers, added capabilities, host network/PID, Docker socket mounts or device mappings** unless the
@@ -57,10 +57,10 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   owner agreeing.
 - **Every service has a health check and the `autoheal: "true"` label** (except autoheal itself). autoheal must
   never get the socket itself, only `tcp://socket-proxy:2375`.
-- **Never change the live server** (Ares) without the owner asking: no `docker compose up`, no edits to
-  service data, Portainer stacks or Nginx Proxy Manager's proxy hosts. Ares fronts every other service in the
-  homelab, so a mistake there takes everything down. Read-only inspection (`docker ps`, `docker inspect`)
-  only when asked.
+- **Never change the live server** (Ares) without the owner asking: merges only as **Merging** says, no
+  `docker compose up`, no edits to service data, Portainer stacks or Nginx Proxy Manager's proxy hosts. Ares fronts
+  every other service in the homelab, so a mistake there takes everything down. Read-only inspection (`docker ps`,
+  `docker inspect`) only when asked.
 - Every setting goes through `.env` (`${VAR:?…}` in compose when required) and is listed in `.env.example`
   and `docs/interfaces.md`.
 - **Container paths and network identity are load-bearing**: the services store paths in their databases,
@@ -72,6 +72,18 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   service is stopped only while its data is copied; compression (pigz or gzip) runs after it starts again.
   `restore.sh` only writes mounts listed in the backup's MANIFEST that the service still mounts read-write, never
   a skipped mount, and leaves excluded paths and nested mounts in place. Keep it that way when adding a service.
+
+## Deploys (owner's decision 2026-10-14)
+- **A merge to `main` deploys.** A pull agent on Ares (systemd user timer `homelab-pull@ares`, from the owner's
+  private homelab-ops repo; rolled out host by host, see Chronos) fetches `main` about every 90 s. When it moved,
+  the agent fast-forwards the checkout and runs `docker compose config --quiet`, `docker compose pull` and
+  `docker compose up -d --remove-orphans --wait`: a merge is live within about two minutes. It refuses local
+  changes and non-fast-forward history, and moves the checkout back if config or pull fails.
+- **Rollback is a revert PR**, deployed the same way. A revert doesn't undo a data migration: then the backup and
+  `scripts/restore.sh` are the way back, with the owner.
+- **Pinning by hand**: the owner checks out another commit or tag on the host; the agent pauses until the checkout
+  is on `main` again. Release tags stay as signed, verified snapshots; they no longer drive deploys.
+- Ares fronts every other service in the homelab: a bad merge here takes all of them offline within minutes.
 
 ## Stack
 - Docker Compose v2 (`compose.yaml`, 6 services), upstream images. Settings per path/volume/network in `.env`
@@ -104,10 +116,16 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   full SHA with a version comment; untrusted `${{ github.event.* }}` only through `env:`.
 - `CI / Checks + tests` and `CI / Stack smoke test` are required checks (with DCO sign-off, Dependency review and
   CodeQL's Analyze (python) / Analyze (actions)) in the `main` ruleset; don't rename those jobs.
-- **Merging (owner's decision 2026-10-07):** Claude opens a PR for every change and may turn on auto-merge for
-  it (`gh pr merge --auto --squash`); GitHub merges once every required check passes. Never bypass a check or
-  the ruleset, and never auto-merge a change to the live server's deployment (merging doesn't deploy anyway).
-  Dependabot's patch and minor updates auto-merge through `dependabot-auto-merge.yml`; majors wait for the owner.
+- **Merging (owner's decisions 2026-10-07 and 2026-10-14):** Claude opens a PR for every change. A merge deploys
+  (see Deploys), so Claude merges once every required check is green (the owner's standing permission, 2026-10-14) and
+  then says that it merged and that it's deploying to Ares. It asks first when the deploy needs something on
+  the server (a new `.env` setting, a data migration without a recent good backup, an update this file says
+  waits for the owner) or the server isn't healthy, and never turns on auto-merge (`gh pr merge --auto`)
+  without the owner's OK. Never bypass a check or the
+  ruleset. Dependabot's patch and minor updates and image rebuilds still auto-merge through
+  `dependabot-auto-merge.yml` once every required check passes, so they now deploy unattended; majors and every
+  Portainer update wait for the owner. Keeping that auto-merge is the owner's call: don't change
+  `dependabot-auto-merge.yml` without it.
 
 ## Commands
 ```sh

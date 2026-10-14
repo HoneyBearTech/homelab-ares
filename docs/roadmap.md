@@ -40,7 +40,8 @@ file changes with them, in the same pull request.
 - **Configure the services' internals** (proxy hosts, certificates, monitors, Portainer environments). Those are
   configured in each service and live in its data, which the backups cover.
 - **Store secrets.** No logins, tokens or private keys in the repository, encrypted or not.
-- **Auto-update.** Every version change is a reviewed commit.
+- **Auto-update from registries.** Every version change is a commit in `main` that passed CI; the server applies
+  only those.
 - **Run the monitoring stack** (Grafana, Prometheus, Loki). It has its own project, even where it shares the host.
 - **Be a general-purpose homelab distribution.** It describes one server; others are welcome to fork or borrow
   from it, but options that only another setup needs are out of scope.
