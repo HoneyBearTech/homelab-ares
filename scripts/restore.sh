@@ -36,6 +36,8 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 # shellcheck source=scripts/lib.sh
 . "$root/scripts/lib.sh"
 cd "$root"
+# Before anything stops: waits for a running deploy, then keeps the pull agent from deploying until this exits.
+deploy_lock
 
 [ -f "$backup/MANIFEST" ] && [ -f "$backup/SHA256SUMS" ] || fail "$backup has no MANIFEST or SHA256SUMS"
 echo "Verifying $backup/SHA256SUMS"

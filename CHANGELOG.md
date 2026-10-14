@@ -6,8 +6,17 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `scripts/backup.sh` and `scripts/restore.sh` no longer race a deploy by the pull agent: before stopping anything
+  they wait for a deploy in progress to finish (up to 30 minutes, then they fail with nothing stopped), and they
+  hold the agent's lock until they exit, so the agent skips its runs meanwhile and deploys right after. On a host without the agent (no `homelab-pull/ares` state directory) nothing changes; where
+  it runs, `flock` is needed ([docs/installing.md](docs/installing.md#deploy-lock)).
+
 ### Changed
 
+- Docs: the quick start no longer says "once releases exist", and the roadmap records what's done (cutover, pull
+  deploys, rebuild rehearsal, both badges).
 - Docs: the maintainer's server now follows `main` with a pull agent instead of running a release tag, so a merge
   deploys within about two minutes, Dependabot's automatic merges included. Rollback is a revert pull request; a
   server is held on a version by checking out that commit, which pauses the agent. Release tags stay as signed,

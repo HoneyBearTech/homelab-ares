@@ -14,6 +14,7 @@ The [quick start](quick-start.md) is the short version of this page.
 - Little disk: the services' data is small, but Nginx Proxy Manager's logs grow. It rotates them weekly and keeps
   four compressed weeks, so a busy proxy can still write a gigabyte or more in a week; watch the free space on
   small boards.
+- `flock` (util-linux, on Debian by default) if the host runs the pull agent ([Deploy lock](#deploy-lock)).
 - `PEANUT_CONFIG_PATH` owned by (or writable for) uid 1000: PeaNUT runs as that user and saves its login there.
 
 ## Where data lives
@@ -97,7 +98,9 @@ login and private key: copy them only to a machine you trust as much as this one
    `BACKUP_REMOTE=backup-host:/volume1/<folder>` and, optionally, the retention and `BACKUP_PING_URL`. For the
    ping, add a monitor of type **Push** in Uptime Kuma with a heartbeat interval of 25 hours, and copy its URL.
 4. **Try it**: `scripts/scheduled-backup.sh`. Each service stops only while its own data is archived, so the proxy
-   is down for seconds, not for the whole backup.
+   is down for seconds, not for the whole backup. On a host that follows `main` with the pull agent
+   ([upgrading.md](upgrading.md#following-main)), the backup first waits for a deploy in progress to finish and
+   then holds the agent's lock, so no deploy starts while a service is stopped ([Deploy lock](#deploy-lock)).
 5. **Schedule it**, with the systemd user units in [`deploy/systemd/`](../deploy/systemd/) (they expect the
    checkout at `~/homelab-ares`; edit both paths in the `.service` file if it's elsewhere). Lingering lets the
    timer run while you're logged out:
@@ -114,6 +117,17 @@ login and private key: copy them only to a machine you trust as much as this one
 
 Restore a copy from the backup server as [rebuilding.md](rebuilding.md) describes; `scripts/restore.sh` verifies
 its `SHA256SUMS` first, and a copy that was cut off has none yet, so it is refused.
+
+### Deploy lock
+
+`scripts/backup.sh` and `scripts/restore.sh` share a lock with the pull agent that deploys `main` on the
+maintainer's server ([upgrading.md](upgrading.md#following-main)). Before they stop anything they wait for a
+running deploy to finish (up to 30 minutes, then they fail without having stopped anything), and they hold the lock
+until they exit; the agent skips its runs while the lock is taken and deploys on its next run after it. The lock is
+the agent's own file, `ares/lock` in its state root (`$HOMELAB_PULL_STATE_DIR`, else `$XDG_STATE_HOME/homelab-pull`,
+else `~/.local/state/homelab-pull`). Where that directory doesn't exist (no agent,
+CI, a workstation) the scripts take no lock; where it does, they need `flock` (util-linux).
+[interfaces.md](interfaces.md#environment) lists the variables.
 
 ## Running it securely
 

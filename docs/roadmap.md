@@ -11,12 +11,16 @@ file changes with them, in the same pull request.
   smoke test proving health, backup and restore, and autoheal's restarts on arm64 in CI.
 - Done: first release (0.1.0) before Ares switches over, so the server is first deployed from a signed, verified
   version.
-- Switch Ares to run the stack from a checkout of this repository, adopting the existing data, ports and
-  networks so nothing that reaches the server notices.
+- Done: Ares runs the stack from a checkout of this repository, adopting the existing data, ports and networks
+  so nothing that reaches the server noticed.
+- Done: Ares follows `main` with a pull agent, so a merge deploys within minutes
+  ([upgrading.md](upgrading.md#following-main)); backups and restores share the agent's lock so they never run
+  during a deploy.
 
 ## Next: safe upgrades and rebuilds
 
-- Rehearse the documented rebuild ([rebuilding.md](rebuilding.md)) on a scratch machine.
+- Done: the documented rebuild ([rebuilding.md](rebuilding.md)) rehearsed on a scratch machine from a real
+  backup.
 - Done: scheduled backups copied off the host (`scripts/scheduled-backup.sh`, a systemd timer), reported to Uptime
   Kuma.
 
@@ -30,9 +34,9 @@ file changes with them, in the same pull request.
 - Keep CI, CodeQL, Scorecard, dependency review and the DCO check green on every change.
 - Branch protection on `main` with required checks; private vulnerability reporting; secret scanning with
   push protection.
-- Reach the OpenSSF Best Practices **Passing** and **Silver** badges, and meet **OSPS Baseline** Levels 1
-  and 2.
-- Signed releases with checksums, SBOM and SLSA provenance from the first release on.
+- Keep the OpenSSF Best Practices **Passing** and **Silver** badges (both reached) and **OSPS Baseline** Levels 1
+  and 2 (met).
+- Signed releases with checksums, SBOM and SLSA provenance (every release since 0.1.0).
 
 ## What homelab-ares will not do
 
