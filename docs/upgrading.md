@@ -8,7 +8,8 @@ with a backup**. The same steps apply to updating a checkout of `main` by hand; 
 ## Before you upgrade
 
 1. Read the release notes (the `CHANGELOG.md` section) for every release between yours and the new one, and
-   the services' own release notes for any major version bump. Anything under **Upgrading** needs action.
+   the services' own release notes for any major version bump. Anything under **Upgrading** needs action. (On a
+   server that follows `main`, majors arrive by themselves: [Following `main`](#following-main).)
 2. Verify the new release ([verifying-releases.md](verifying-releases.md)).
 3. Plan for the proxy being down for a minute or two: every service behind it is unreachable meanwhile.
 
@@ -78,9 +79,10 @@ itself ([dependencies.md](dependencies.md#tracking-dependencies)).
 - The agent only fast-forwards: it refuses a checkout with local changes or a `main` whose history was rewritten.
   If the configuration doesn't resolve or an image can't be pulled, it moves the checkout back, so the server keeps
   running what it ran.
-- **The merge is the upgrade.** Before merging an update that can migrate a service's data (a major version, and
-  every Portainer update), read the release notes and take a backup on the server (`scripts/backup.sh`). The updates
-  that merge by themselves rely on the nightly [scheduled backup](installing.md#scheduled-backups).
+- **The merge is the upgrade.** Major versions merge by themselves too, so an update that migrates a service's
+  data one way can arrive unattended; read its release notes when it lands, and restore from the nightly
+  [scheduled backup](installing.md#scheduled-backups) if it breaks. Before merging an update by hand (every
+  Portainer update), read the release notes and take a backup on the server (`scripts/backup.sh`).
 - **Rolling back** is a revert pull request, deployed the same way. If the service already migrated its data,
   restore that too ([Rolling back](#rolling-back)).
 - **Holding the server on a version**: check out that commit or release on the server (`git checkout vX.Y.Z`).

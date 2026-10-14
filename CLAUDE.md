@@ -42,10 +42,12 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
 
 ## Rules for the stack
 - **Every image is pinned as `name:tag@sha256:<digest>`.** Never `latest`, never tag-only. Dependabot
-  (`docker-compose` ecosystem) updates tag and digest together. Patch and minor updates, and image rebuilds (same
-  tag, new digest; owner 2026-10-14), are auto-merged once the required checks pass (`dependabot-auto-merge.yml`);
-  major updates wait for the owner, and so does every Portainer update (server and agents move together; owner's
-  decision 2026-10-07). Every merge deploys, the automatic ones included (see Deploys).
+  (`docker-compose` ecosystem) updates tag and digest together. Patch, minor and major updates (majors since
+  owner 2026-10-14), and image rebuilds (same tag, new digest; owner 2026-10-14), are auto-merged once the required
+  checks pass (`dependabot-auto-merge.yml`); every Portainer update waits for the owner (server and agents move
+  together; owner's decision 2026-10-07), and so does any update Dependabot can't classify. Every merge deploys,
+  the automatic ones included (see Deploys): a major reaches Ares unattended, with the nightly backup and a revert
+  PR as the way back (restore from the backup if it migrated data one way).
 - **Arm64.** Ares is arm64: every image must publish `linux/arm64`. The smoke test runs on an arm64 runner and
   the image scan scans `linux/arm64`.
 - **No privileged containers, added capabilities, host network/PID, Docker socket mounts or device mappings** unless the
@@ -122,10 +124,11 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   the server (a new `.env` setting, a data migration without a recent good backup, an update this file says
   waits for the owner) or the server isn't healthy, and never turns on auto-merge (`gh pr merge --auto`)
   without the owner's OK. Never bypass a check or the
-  ruleset. Dependabot's patch and minor updates and image rebuilds still auto-merge through
-  `dependabot-auto-merge.yml` once every required check passes, so they now deploy unattended; majors and every
-  Portainer update wait for the owner. Keeping that auto-merge is the owner's call: don't change
-  `dependabot-auto-merge.yml` without it.
+  ruleset. Dependabot's patch, minor and major updates and image rebuilds still auto-merge through
+  `dependabot-auto-merge.yml` once every required check passes, so they now deploy unattended; every Portainer
+  update and any update Dependabot can't classify wait for the owner. Claude never merges a major update itself:
+  majors are merged only by Dependabot's auto-merge or by the owner. Keeping that auto-merge is the owner's call:
+  don't change `dependabot-auto-merge.yml` without it.
 
 ## Commands
 ```sh
