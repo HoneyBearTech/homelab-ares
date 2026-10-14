@@ -12,6 +12,10 @@ All notable changes to homelab-ares are documented here. The format follows
   deploys within about two minutes, Dependabot's automatic merges included. Rollback is a revert pull request; a
   server is held on a version by checking out that commit, which pauses the agent. Release tags stay as signed,
   verified snapshots ([docs/upgrading.md](docs/upgrading.md#following-main)).
+- Dependabot's major updates now merge automatically too (owner 2026-10-14), once every required check passes, so
+  they deploy to the maintainer's server unattended; the nightly backup is the way back for a major that migrates a
+  service's data one way. Every Portainer update, and any update Dependabot can't classify, is still merged by hand
+  ([docs/dependencies.md](docs/dependencies.md#tracking-dependencies)).
 
 ## [0.4.0] - 2026-10-14
 
