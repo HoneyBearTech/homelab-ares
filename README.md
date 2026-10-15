@@ -50,8 +50,9 @@ registry tag by itself: what runs is always a commit in `main`. Metrics dashboar
 
 ```sh
 git clone https://github.com/HoneyBearTech/homelab-ares.git && cd homelab-ares
-cp .env.example .env && chmod 600 .env              # then set TZ, and the paths if you keep data elsewhere
-. ./.env && mkdir -p "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH"
+cp .env.example .env && chmod 600 .env              # then set TZ, and CONFIG_ROOT if you keep data elsewhere
+. ./.env && mkdir -p "$CONFIG_ROOT"/npm/{config,letsencrypt,logrotate} \
+  "$CONFIG_ROOT"/{uptime-kuma,peanut,portainer}/config
 docker network create "$PROXY_NETWORK"
 docker compose up -d --wait
 ```
@@ -77,16 +78,13 @@ Settings come from `.env` (template [`.env.example`](.env.example)), which holds
 | Setting | Default in `.env.example` | Meaning |
 | --- | --- | --- |
 | `TZ` | `Etc/UTC` | Time zone |
-| `NPM_DATA_PATH` | `/srv/appdata/npm/data` | Nginx Proxy Manager's settings, proxy hosts and logs |
-| `NPM_LETSENCRYPT_PATH` | `/srv/appdata/npm/letsencrypt` | Nginx Proxy Manager's certificates and private keys |
+| `CONFIG_ROOT` | `/srv/config` | Every service's data, in `CONFIG_ROOT/<service>/config` and folders beside it |
 | `PROXY_NETWORK` | `homelab-ares_proxy` | The proxy's Docker network, created once outside the stack |
-| `UPTIME_KUMA_VOLUME` | `homelab-ares_uptime-kuma` | Docker volume with Uptime Kuma's database |
-| `PEANUT_CONFIG_PATH` | `/srv/appdata/peanut` | PeaNUT's settings, including the NUT login |
-| `PORTAINER_VOLUME` | `homelab-ares_portainer` | Docker volume with Portainer's database |
 
-All of it holds certificates and logins: back it up (`scripts/backup.sh`). autoheal's optional webhook URL (restart
-notices, for example to Discord) goes in `autoheal.env` (template [`autoheal.env.example`](autoheal.env.example),
-mode `600`, gitignored).
+`CONFIG_ROOT` holds certificates and logins: back it up (`scripts/backup.sh`), and never point it into
+`/var/lib/docker/volumes`, where `docker volume prune` deletes it
+([installing](docs/installing.md#where-data-lives)). autoheal's optional webhook URL (restart notices, for example to
+Discord) goes in `autoheal.env` (template [`autoheal.env.example`](autoheal.env.example), mode `600`, gitignored).
 
 Ports, volumes and labels: [docs/interfaces.md](docs/interfaces.md).
 

@@ -20,16 +20,18 @@ proxy.
    cp .env.example .env && chmod 600 .env
    ```
 
-   The defaults work for a new installation; set `TZ`, and change the paths if you keep data elsewhere. Every
-   setting is described in [interfaces.md](interfaces.md#settings). For restart notices from autoheal, also
+   The defaults work for a new installation; set `TZ`, and `CONFIG_ROOT` if you keep the data elsewhere (never
+   inside `/var/lib/docker/volumes`: [installing.md](installing.md#where-data-lives)). Every setting is described in
+   [interfaces.md](interfaces.md#settings). For restart notices from autoheal, also
    create `autoheal.env` from `autoheal.env.example` (mode `600`) with a webhook URL.
 
 3. **Create the data directories and the proxy's network** (the directories as your user, so Docker doesn't
    create them owned by root):
 
    ```sh
-   . ./.env && mkdir -p "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH"
-   sudo chown 1000:1000 "$PEANUT_CONFIG_PATH"   # PeaNUT runs as uid 1000 (skip if that's your user)
+   . ./.env && mkdir -p "$CONFIG_ROOT"/npm/{config,letsencrypt,logrotate} \
+     "$CONFIG_ROOT"/{uptime-kuma,peanut,portainer}/config
+   sudo chown 1000:1000 "$CONFIG_ROOT/peanut/config"   # PeaNUT runs as uid 1000 (skip if that's your user)
    docker network create "$PROXY_NETWORK"
    ```
 

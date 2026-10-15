@@ -34,7 +34,7 @@ who already has root or `docker` group access on the host, or write access to `.
 3. **Internet → proxy.** Only ports 80 and 443 are meant to be reachable from outside; everything behind them is
    configured per proxy host, with TLS and access lists.
 4. **LAN → admin UIs.** Each admin UI is behind the service's own login and isn't published beyond the LAN.
-5. **Containers → host.** Only each service's data directory or volume is mounted; no host namespaces. The two
+5. **Containers → host.** Only each service's folder under `CONFIG_ROOT` is mounted; no host namespaces. The two
    socket mounts (Portainer; socket-proxy, which autoheal reaches only on an internal network) are reviewed,
    labelled exceptions.
 6. **Ares → other Docker hosts.** Portainer's agents obey only their paired server; that pairing makes this

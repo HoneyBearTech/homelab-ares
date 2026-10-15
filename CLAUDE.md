@@ -28,13 +28,13 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
 ## This repo is public
 - No hostnames, IP addresses, internal or public domains, host paths, Portainer stack names or personal email
   addresses in anything committed: code, compose, docs, examples, tests, commit messages. Host facts live
-  only in the Chronos notes. Examples use placeholders (`/srv/appdata`, `example.com`, `homelab-ares_`).
+  only in the Chronos notes. Examples use placeholders (`/srv/config`, `example.com`, `homelab-ares_`).
 - Commit as `31805425+HoneyBearTech@users.noreply.github.com` (set as this repo's `user.email`), with
   `git commit -s` for the DCO sign-off; commits and tags are SSH-signed.
 - No secrets: the services' logins, API tokens, TLS certificates and keys, and the NUT credentials stay in their
   data on the host, never in `compose.yaml`, `.env` or the `*.example` files. A secret a service can only take
   from its environment gets its own gitignored `<service>.env` (`env_file`) with a committed
-  `<service>.env.example`. `.gitignore` covers `.env`, keys, certificates, `appdata/`, `data/`, `backups/`;
+  `<service>.env.example`. `.gitignore` covers `.env`, keys, certificates, `config/`, `appdata/`, `data/`, `backups/`;
   extend it rather than work around it. gitleaks runs over the whole history in CI.
 - Keep the repo on track for OpenSSF Baseline Levels 1 and 2 and the Best Practices Passing and Silver
   badges. If a change would break a met criterion (for example unpinning an image or an Action, adding a
@@ -64,16 +64,28 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   every other service in the homelab, so a mistake there takes everything down. Read-only inspection (`docker ps`,
   `docker inspect`) only when asked.
 - Every setting goes through `.env` (`${VAR:?…}` in compose when required) and is listed in `.env.example`
-  and `docs/interfaces.md`.
+  and `docs/interfaces.md` (`tests/test_settings.py` checks both).
+- **Data layout (owner's decision 2026-10-15, the same in every homelab stack)**: one required setting,
+  `CONFIG_ROOT`; each service's settings and database live in `${CONFIG_ROOT}/<service>/config` (lowercase service
+  name) mounted at the service's usual data path, and any other folder of its own beside it as
+  `${CONFIG_ROOT}/<service>/<purpose>` (npm's `letsencrypt`, `logrotate`). No named Docker volumes for service data,
+  and no per-service path or volume settings; `tests/test_settings.py` enforces it.
+- **Never point a path setting into `/var/lib/docker/volumes`, and never keep service data in a named volume.**
+  `docker volume prune`, `docker system prune --volumes` and Portainer's "remove unused volumes" delete every volume
+  no container mounts *as a volume*, including one whose `_data` folder a service bind-mounts by path (that is how
+  helios lost Plex's and Tautulli's data in 2026-10). Keep data under `CONFIG_ROOT`; the warning is in
+  `docs/installing.md#where-data-lives`.
 - **Container paths and network identity are load-bearing**: the services store paths in their databases,
-  and other systems reach Ares by its published ports and Nginx Proxy Manager's network. Adopt the existing
-  volumes and keep paths, ports and networks the same; see the cutover plan in Chronos.
+  and other systems reach Ares by its published ports and Nginx Proxy Manager's network. Keep container paths,
+  ports and networks the same when the host side moves; see the cutover plan in Chronos.
 - `scripts/backup.sh` archives every read-write volume or bind mount except the Docker socket, anonymous volumes
   and the mounts a service's `org.honeybeartech.ares.backup.skip` label lists; paths inside a mount that its
   `org.honeybeartech.ares.backup.exclude` label lists (npm's `/data/logs`) are left out of the archive. Each
   service is stopped only while its data is copied; compression (pigz or gzip) runs after it starts again.
   `restore.sh` only writes mounts listed in the backup's MANIFEST that the service still mounts read-write, never
-  a skipped mount, and leaves excluded paths and nested mounts in place. Keep it that way when adding a service.
+  a skipped mount, and leaves excluded paths and nested mounts in place. It writes to what compose.yaml mounts at
+  that container path now (recreating a container made from an older compose.yaml, creating a missing directory), so
+  a backup of an old volume restores into its `CONFIG_ROOT` folder. Keep it that way when adding a service.
 
 ## Deploys (owner's decision 2026-10-14)
 - **A merge to `main` deploys.** A pull agent on Ares (systemd user timer `homelab-pull@ares`, from the owner's
@@ -93,9 +105,9 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
 - Ares fronts every other service in the homelab: a bad merge here takes all of them offline within minutes.
 
 ## Stack
-- Docker Compose v2 (`compose.yaml`, 6 services), upstream images. Settings per path/volume/network in `.env`
-  (`*_PATH`, `*_VOLUME`, `PROXY_NETWORK`); the smoke test replaces each kind with throwaway ones, so keep that
-  naming for new settings.
+- Docker Compose v2 (`compose.yaml`, 6 services), upstream images. Settings for directories and networks in `.env`
+  (`CONFIG_ROOT`, `PROXY_NETWORK`; other kinds `*_ROOT`, `*_PATH`, `*_VOLUME`, `*_NETWORK`); the smoke test replaces
+  each kind with throwaway ones, so keep that naming for new settings.
 - `scripts/check_compose.py`: Python 3.14, standard library only. Reads `docker compose config --format json`,
   reports policy violations (exit 1), `--sbom FILE` writes a CycloneDX 1.6 SBOM of the images.
 - `scripts/scheduled-backup.sh` (run nightly by the systemd user units in `deploy/systemd/`): backup.sh, then rsync
