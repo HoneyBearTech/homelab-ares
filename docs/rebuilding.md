@@ -71,13 +71,17 @@ A server that follows `main` ([upgrading.md](upgrading.md#following-main)) stays
 (skip the `git checkout`), and gets its pull agent back once the stack is healthy.
 
 Copy any other file from the backup's `env/` (such as `autoheal.env` and `backup.env`) the same way (mode `600`).
-Edit `.env` if the new host's paths differ; keep the volume names, since the restore creates volumes under them.
-Create the data directories as your user:
+Edit `CONFIG_ROOT` in `.env` if the new host keeps the data elsewhere (never inside `/var/lib/docker/volumes`:
+[installing.md](installing.md#where-data-lives)). Create the service folders as your user:
 
 ```sh
-. ./.env && mkdir -p "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH"
-sudo chown 1000:1000 "$PEANUT_CONFIG_PATH"   # PeaNUT runs as uid 1000
+. ./.env && mkdir -p "$CONFIG_ROOT"/npm/{config,letsencrypt,logrotate} \
+  "$CONFIG_ROOT"/{uptime-kuma,peanut,portainer}/config
+sudo chown 1000:1000 "$CONFIG_ROOT/peanut/config"   # PeaNUT runs as uid 1000
 ```
+
+A backup taken while some data was still in Docker volumes restores the same way: each archive goes into the folder
+that replaced the volume.
 
 Create the proxy's network with the address range it had, from the backup's `NETWORKS`:
 
@@ -99,7 +103,7 @@ docker compose config --quiet && docker compose pull
 ## 5. Restore and start
 
 ```sh
-scripts/restore.sh ~/restore          # verifies SHA256SUMS, creates the volumes and containers, asks first
+scripts/restore.sh ~/restore          # verifies SHA256SUMS, creates the containers, asks first
 docker compose up -d --wait           # waits until every service reports healthy
 docker compose ps
 ```
@@ -161,11 +165,11 @@ The restored services believe they are the live ones, so keep them from acting l
   it and `docker compose up`, run
 
   ```sh
-  docker run --rm -v "$UPTIME_KUMA_VOLUME":/data alpine:3.22 sh -c \
+  docker run --rm -v "$CONFIG_ROOT/uptime-kuma/config":/data alpine:3.22 sh -c \
     'apk add -q sqlite && sqlite3 /data/kuma.db "update monitor set active = 0;"'
   ```
 
-  (its database is SQLite unless `db-config.json` in the volume says otherwise). Its monitors are then listed, all
+  (its database is SQLite unless `db-config.json` in its folder says otherwise). Its monitors are then listed, all
   paused.
 - **Portainer** holds the agents' trust, so it can manage every agent host just like the live one. Look, don't
   change anything, and stop it when you're done.
@@ -196,9 +200,8 @@ Then remove everything the rehearsal created; it all holds secrets:
 
 ```sh
 . ./.env && docker compose down
-docker volume rm "$UPTIME_KUMA_VOLUME" "$PORTAINER_VOLUME" homelab-ares_npm-logrotate
 docker network rm "$PROXY_NETWORK"
-sudo rm -rf "$NPM_DATA_PATH" "$NPM_LETSENCRYPT_PATH" "$PEANUT_CONFIG_PATH" ~/restore .env ./*.env
+sudo rm -rf "$CONFIG_ROOT" ~/restore .env ./*.env
 ```
 
 (Docker Desktop leaves those files to your user: no `sudo` there.) Then put back anything you renamed, stopped or

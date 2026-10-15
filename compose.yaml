@@ -3,6 +3,11 @@
 # reference: docs/interfaces.md); the one secret, autoheal's optional webhook, from autoheal.env (template:
 # autoheal.env.example). Every image is pinned as name:tag@sha256:<digest> and publishes linux/arm64; Dependabot
 # proposes updates. scripts/check_compose.py enforces the policy (docs/security.md#policy).
+#
+# Each service keeps its settings and database in a host directory, CONFIG_ROOT/<service>/config, mounted at its
+# usual data path, and any other folder of its own beside that (CONFIG_ROOT/npm/letsencrypt, for example). No named
+# Docker volumes: `docker volume prune` deletes every volume no container mounts as a volume, and with it any data a
+# path setting pointed into /var/lib/docker/volumes (docs/installing.md#where-data-lives).
 name: homelab-ares
 
 # Every service starts with no Linux capabilities and can't gain privileges (setuid binaries, file capabilities);
@@ -59,11 +64,13 @@ services:
       - "443:443" # proxied HTTPS
       - "81:81" # admin UI: keep it on the LAN
     volumes:
-      - ${NPM_DATA_PATH:?set NPM_DATA_PATH in .env}:/data
-      - ${NPM_LETSENCRYPT_PATH:?set NPM_LETSENCRYPT_PATH in .env}:/etc/letsencrypt
+      # Its settings database, proxy hosts and logs.
+      - ${CONFIG_ROOT:?set CONFIG_ROOT in .env}/npm/config:/data
+      # Its certificates, their private keys and any DNS-challenge credentials.
+      - ${CONFIG_ROOT:?set CONFIG_ROOT in .env}/npm/letsencrypt:/etc/letsencrypt
       # When logrotate last rotated each log: it rotates them weekly, and with this state in the container a new
       # container (every upgrade) would start the week again.
-      - npm-logrotate:/var/lib/logrotate
+      - ${CONFIG_ROOT:?set CONFIG_ROOT in .env}/npm/logrotate:/var/lib/logrotate
     networks:
       - proxy
     healthcheck:
@@ -89,14 +96,15 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - uptime-kuma:/app/data
+      - ${CONFIG_ROOT:?set CONFIG_ROOT in .env}/uptime-kuma/config:/app/data
     healthcheck:
       <<: *healthcheck
       test: ["CMD", "extra/healthcheck"]
 
   peanut:
     <<: *defaults
-    # Runs as uid 1000 and keeps its login in /config/auth.yaml, so PEANUT_CONFIG_PATH must be writable by uid 1000.
+    # Runs as uid 1000 and keeps its login in /config/auth.yaml, so CONFIG_ROOT/peanut/config must be writable by
+    # uid 1000.
     # Its API, metrics included, needs that login (HTTP Basic auth works for scrapers); /api/ping stays open.
     image: brandawg93/peanut:6.0.0@sha256:6629dce915da8b313f08b2e73dd2e54b60e7c0f642c21a8ebc37fe0a820bf41e
     container_name: PeaNUT
@@ -113,7 +121,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ${PEANUT_CONFIG_PATH:?set PEANUT_CONFIG_PATH in .env}:/config
+      - ${CONFIG_ROOT:?set CONFIG_ROOT in .env}/peanut/config:/config
     healthcheck:
       <<: *healthcheck
       # The image has no shell or wget; it ships this check (it calls /api/ping).
@@ -137,7 +145,7 @@ services:
       # published: add it back only for an Edge agent.
       - "9443:9443" # web UI (HTTPS): keep it on the LAN
     volumes:
-      - portainer:/data
+      - ${CONFIG_ROOT:?set CONFIG_ROOT in .env}/portainer/config:/data
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       <<: *healthcheck
@@ -215,15 +223,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - docker-proxy
-
-volumes:
-  # Named so an existing installation's volumes can be adopted; Compose only warns that it didn't create them.
-  uptime-kuma:
-    name: ${UPTIME_KUMA_VOLUME:?set UPTIME_KUMA_VOLUME in .env}
-  portainer:
-    name: ${PORTAINER_VOLUME:?set PORTAINER_VOLUME in .env}
-  # Nothing to adopt: Compose creates it as <project>_npm-logrotate.
-  npm-logrotate:
 
 networks:
   # The proxy's network is created once outside the stack (docs/installing.md), so it keeps its address range

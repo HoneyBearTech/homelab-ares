@@ -48,8 +48,8 @@ Portainer ──Docker socket──▶ Docker on Ares ; Portainer ──agent AP
 autoheal ──(internal network)──▶ socket-proxy ──read-only socket, filtered──▶ Docker on Ares (restart unhealthy)
 ```
 
-Each service keeps its settings and database in its own data directory or volume (see
-[interfaces.md](interfaces.md#volumes-and-mounts)), which is what `scripts/backup.sh` archives.
+Each service keeps its settings and database in its own folder under `CONFIG_ROOT` on the host, no Docker volumes
+(see [interfaces.md](interfaces.md#volumes-and-mounts)), which is what `scripts/backup.sh` archives.
 
 ## How changes reach the host
 

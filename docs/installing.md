@@ -15,20 +15,40 @@ The [quick start](quick-start.md) is the short version of this page.
   four compressed weeks, so a busy proxy can still write a gigabyte or more in a week; watch the free space on
   small boards.
 - `flock` (util-linux, on Debian by default) if the host runs the pull agent ([Deploy lock](#deploy-lock)).
-- `PEANUT_CONFIG_PATH` owned by (or writable for) uid 1000: PeaNUT runs as that user and saves its login there.
+- `CONFIG_ROOT/peanut/config` owned by (or writable for) uid 1000: PeaNUT runs as that user and saves its login
+  there.
 
 ## Where data lives
 
-| What | Where on the host (setting) | In the container |
-| --- | --- | --- |
-| Nginx Proxy Manager's settings, proxy hosts and logs | directory `NPM_DATA_PATH` | `/data` |
-| Nginx Proxy Manager's certificates and private keys | directory `NPM_LETSENCRYPT_PATH` | `/etc/letsencrypt` |
-| When Nginx Proxy Manager last rotated its logs | volume `homelab-ares_npm-logrotate` (Compose creates it) | `/var/lib/logrotate` |
-| Uptime Kuma's database | volume `UPTIME_KUMA_VOLUME` | `/app/data` |
-| PeaNUT's settings (NUT server address and login) | directory `PEANUT_CONFIG_PATH` | `/config` |
-| Portainer's database | volume `PORTAINER_VOLUME` | `/data` |
+Every service keeps its data in its own folder under one directory, `CONFIG_ROOT` (the one required path setting):
+its settings and database in `CONFIG_ROOT/<service>/config`, and any other folder of its own beside that.
 
-Details in [interfaces.md](interfaces.md#volumes-and-mounts).
+| What | Where on the host | In the container |
+| --- | --- | --- |
+| Nginx Proxy Manager's settings, proxy hosts and logs | `CONFIG_ROOT/npm/config` | `/data` |
+| Nginx Proxy Manager's certificates and private keys | `CONFIG_ROOT/npm/letsencrypt` | `/etc/letsencrypt` |
+| When Nginx Proxy Manager last rotated its logs | `CONFIG_ROOT/npm/logrotate` | `/var/lib/logrotate` |
+| Uptime Kuma's database | `CONFIG_ROOT/uptime-kuma/config` | `/app/data` |
+| PeaNUT's settings (NUT server address and login) | `CONFIG_ROOT/peanut/config` | `/config` |
+| Portainer's database | `CONFIG_ROOT/portainer/config` | `/data` |
+
+```
+$CONFIG_ROOT/
+  npm/{config,letsencrypt,logrotate}/
+  uptime-kuma/config/
+  peanut/config/          # owned by uid 1000
+  portainer/config/
+```
+
+The services store their container paths, not the host's, so `CONFIG_ROOT` can move between hosts. Details in
+[interfaces.md](interfaces.md#volumes-and-mounts).
+
+> **Never point `CONFIG_ROOT` (or any other path setting) into `/var/lib/docker/volumes`, and don't keep a
+> service's data in a named Docker volume.** `docker volume prune`, `docker system prune --volumes` and Portainer's
+> "remove unused volumes" delete every volume that no container mounts *as a volume*, and that includes a volume
+> whose `_data` folder a service bind-mounts by its path: Docker counts it as unused and deletes the data under the
+> running service. Keep the data in a directory of your own under `CONFIG_ROOT` (a home directory or `/srv`, say),
+> which no Docker cleanup touches.
 
 ## Installing
 
@@ -36,25 +56,33 @@ Details in [interfaces.md](interfaces.md#volumes-and-mounts).
    [verifying-releases.md](verifying-releases.md)).
 2. Create `.env` from `.env.example` (mode `600`) and set every value. Optionally create `autoheal.env` from
    `autoheal.env.example` (mode `600`) with a webhook URL for restart notices.
-3. Create the data directories and the proxy's network (`docker network create "$PROXY_NETWORK"`), then
-   `docker compose up -d --wait`.
+3. Create the service folders under `CONFIG_ROOT` as your user (the [quick start](quick-start.md) step 3 lists
+   them; PeaNUT's owned by uid 1000) and the proxy's network (`docker network create "$PROXY_NETWORK"`), then
+   `docker compose up -d --wait`. A folder you didn't create is created by Docker, owned by root.
 
 ### Adopting existing containers
 
 If the services already run on the host (from Portainer stacks, `docker run` or other Compose projects), point
 the stack at their existing data instead of starting empty:
 
-- Set each `*_PATH` to the directory the old container mounts, each `*_VOLUME` to the volume it uses
-  (`docker inspect <container>` lists both), and `PROXY_NETWORK` to the network the old proxy is on. Keeping the
-  proxy's network keeps its address range, which access lists may rely on. Docker Compose warns that the volumes
-  "already exist but were not created by Docker Compose"; that's expected.
+- Copy each service's data into its folder under `CONFIG_ROOT` ([Where data lives](#where-data-lives)) with the
+  old container stopped, and set `PROXY_NETWORK` to the network the old proxy is on. Keeping the proxy's network
+  keeps its address range, which access lists may rely on. `docker inspect --format '{{json .Mounts}}' <container>`
+  shows what a container mounts where. For a Docker volume, copy its contents (`cp -a` keeps the owners):
+
+  ```sh
+  . ./.env && docker run --rm --network none -v <the old volume>:/from:ro \
+    -v "$CONFIG_ROOT/uptime-kuma/config:/to" busybox cp -a /from/. /to/
+  ```
+
+  The old volumes and directories aren't touched: remove them once the stack runs from `CONFIG_ROOT`.
 - The published ports and container names are the services' usual ones; anything that reaches them keeps working.
 - Back up the old data first, then stop and remove the old containers (the names must be free) and start the
   stack. Be especially careful with the proxy: while it's down, every service behind it is unreachable.
 - A newer image may migrate a service's data on its first start and can't go back; the backup is the way back.
 - **Uptime Kuma** runs the slim image, without Chromium: change any "Real Browser" monitor to an HTTP monitor first.
 - **PeaNUT 6** asks for a login on first start if its settings have none yet, and its metrics then need that login:
-  update whatever scrapes them. Change the owner of its settings directory to uid 1000 first.
+  update whatever scrapes them. Its folder, `CONFIG_ROOT/peanut/config`, must belong to uid 1000.
 
 The maintainer's server runs `main` rather than a release, and deploys every merge by itself
 ([upgrading.md](upgrading.md#following-main)). For your own setup, a release is the safer choice.
@@ -161,6 +189,6 @@ CI, a workstation) the scripts take no lock; where it does, they need `flock` (u
 docker compose down          # stops and removes the containers and the stack's network
 ```
 
-The data directories, the volumes and the proxy's network are left untouched. Remove them by hand
-(`docker volume rm`, `docker network rm`) if you no longer want the services' data; note that it contains private
-keys and passwords.
+`CONFIG_ROOT` and the proxy's network are left untouched. Remove them by hand (`rm -rf "$CONFIG_ROOT"` with
+`sudo` for the files the services made as root, `docker network rm`) if you no longer want the services' data;
+note that it contains private keys and passwords.

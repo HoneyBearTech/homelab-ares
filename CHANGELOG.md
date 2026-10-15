@@ -6,6 +6,38 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ## [Unreleased]
 
+### Upgrading
+
+- **Move each service's data into its folder under `CONFIG_ROOT` before deploying this, then add `CONFIG_ROOT` to
+  `.env`** (required; see `.env.example`). Stop the services first (`docker compose stop npm uptime-kuma peanut
+  portainer`; every site behind the proxy is unreachable until the stack is up again) and leave them stopped until
+  this is deployed, since what they write to the old place after the copy is lost. Then move or copy, keeping the
+  files' owners:
+
+  | Service | Old location | New folder |
+  | --- | --- | --- |
+  | npm | the `NPM_DATA_PATH` directory | `CONFIG_ROOT/npm/config` |
+  | npm | the `NPM_LETSENCRYPT_PATH` directory | `CONFIG_ROOT/npm/letsencrypt` |
+  | npm | the `<project>_npm-logrotate` volume (`homelab-ares_npm-logrotate`) | `CONFIG_ROOT/npm/logrotate` |
+  | uptime-kuma | the `UPTIME_KUMA_VOLUME` volume | `CONFIG_ROOT/uptime-kuma/config` |
+  | peanut | the `PEANUT_CONFIG_PATH` directory | `CONFIG_ROOT/peanut/config`, owned by uid 1000 (PeaNUT runs as it) |
+  | portainer | the `PORTAINER_VOLUME` volume | `CONFIG_ROOT/portainer/config` |
+
+  A directory can simply be moved (`sudo mv`, which keeps owners). For a volume, Uptime Kuma's for example:
+
+  ```sh
+  . ./.env && mkdir -p "$CONFIG_ROOT/uptime-kuma/config" && docker run --rm --network none \
+    -v "$UPTIME_KUMA_VOLUME:/from:ro" -v "$CONFIG_ROOT/uptime-kuma/config:/to" busybox cp -a /from/. /to/
+  ```
+
+  Add `CONFIG_ROOT` to `.env` only once the data is in place (a deploy with it set but the folders empty starts the
+  services empty, the proxy without its hosts and certificates). A deploy without it stops at
+  `docker compose config` and changes nothing. Afterwards drop `NPM_DATA_PATH`, `NPM_LETSENCRYPT_PATH`,
+  `UPTIME_KUMA_VOLUME`, `PEANUT_CONFIG_PATH` and `PORTAINER_VOLUME` from `.env` (no longer read) and, once the
+  services run from `CONFIG_ROOT`, remove the old volumes (`docker volume rm`) and directories.
+- Backups taken while the data was in volumes and the old directories restore as they are: `scripts/restore.sh` puts
+  each archive into the service's folder under `CONFIG_ROOT`.
+
 ### Fixed
 
 - `scripts/backup.sh` and `scripts/restore.sh` no longer race a deploy by the pull agent: before stopping anything
@@ -15,6 +47,17 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Changed
 
+- Every service's data moves to one host directory, `CONFIG_ROOT`, one folder per service: its settings and database
+  in `CONFIG_ROOT/<service>/config`, still mounted at the same container path, and Nginx Proxy Manager's
+  certificates and log-rotation state beside them in `CONFIG_ROOT/npm/letsencrypt` and `CONFIG_ROOT/npm/logrotate`
+  (the maintainer's decision, 2026-10-15, the same layout in every homelab stack). The new required setting
+  `CONFIG_ROOT` replaces `NPM_DATA_PATH`, `NPM_LETSENCRYPT_PATH`, `UPTIME_KUMA_VOLUME`, `PEANUT_CONFIG_PATH` and
+  `PORTAINER_VOLUME`, and `compose.yaml` no longer declares any Docker volumes: `docker volume prune` deletes every
+  volume no container mounts as a volume, including one a service bind-mounts by its `_data` path, so service data
+  no longer lives in volumes. The docs warn never to point a path setting into `/var/lib/docker/volumes`
+  ([docs/installing.md](docs/installing.md#where-data-lives)). `scripts/restore.sh` writes each archive to what the
+  service mounts at that container path now, creating a missing directory and recreating a container that predates
+  `compose.yaml`, so backups of the old volumes and directories restore into the new folders.
 - Docs: the quick start no longer says "once releases exist", and the roadmap records what's done (cutover, pull
   deploys, rebuild rehearsal, both badges).
 - Docs: the maintainer's server now follows `main` with a pull agent instead of running a release tag, so a merge

@@ -6,7 +6,8 @@
 !*.env.example
 .envrc
 
-# Service data never belongs in the repo, even if someone points APPDATA_ROOT inside the checkout
+# Service data never belongs in the repo, even if someone points CONFIG_ROOT inside the checkout
+config/
 appdata/
 data/
 

@@ -58,7 +58,7 @@ with these settings, and that Uptime Kuma can still ping.
 | npm | `CHOWN`, `DAC_OVERRIDE`, `FOWNER`, `SETUID`, `SETGID`, `KILL`, `NET_BIND_SERVICE` | no | Its init runs as root, creates its user, takes ownership of its data and runs nginx on ports 80 and 443 as that user; nginx, certbot and the init write all over the image |
 | uptime-kuma | `DAC_OVERRIDE`, `NET_RAW` | yes (`/tmp` in memory) | It runs as root, but its data directory belongs to uid 1000; the image's `ping` carries the `NET_RAW` file capability, which Linux refuses to run without |
 | peanut | none | yes (`/tmp` in memory) | Runs as uid 1000 and writes only its settings directory |
-| portainer | none | yes (`/tmp` in memory) | Writes only its data volume and temporary files; it reaches Docker through the socket, which belongs to root |
+| portainer | none | yes (`/tmp` in memory) | Writes only its data directory and temporary files; it reaches Docker through the socket, which belongs to root |
 | autoheal | none | yes | Only talks to socket-proxy |
 | socket-proxy | none | yes (`/run`, `/tmp` in memory) | Only reads the socket |
 
@@ -101,7 +101,7 @@ since their images offer nothing else. Without capabilities that root can only r
 | DNS provider API token (DNS challenge, if used) | Nginx Proxy Manager's data | same |
 | Notification tokens (chat webhooks, mail) | Uptime Kuma's database | same |
 | NUT server login | PeaNUT's settings | same |
-| PeaNUT's own login (bcrypt hash) | PeaNUT's `auth.yaml` in `PEANUT_CONFIG_PATH` | same |
+| PeaNUT's own login (bcrypt hash) | PeaNUT's `auth.yaml` in `CONFIG_ROOT/peanut/config` | same |
 | autoheal's webhook URL | `autoheal.env` (mode `600`, gitignored) | same |
 | The backup push monitor's URL | `backup.env` (mode `600`, gitignored) | same |
 | The key for the backup server | the backup user's `~/.ssh` on the host | same |

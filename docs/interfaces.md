@@ -13,15 +13,12 @@ setting is required: `docker compose` stops with an error naming any that's miss
 | Setting | Example | Meaning |
 | --- | --- | --- |
 | `TZ` | `Etc/UTC` | Time zone (tz database name) for logs and schedules. |
-| `NPM_DATA_PATH` | `/srv/appdata/npm/data` | Host directory with Nginx Proxy Manager's settings database, proxy hosts and logs, mounted at `/data`. |
-| `NPM_LETSENCRYPT_PATH` | `/srv/appdata/npm/letsencrypt` | Host directory with Nginx Proxy Manager's certificates, their private keys, the ACME account and any DNS-challenge credentials, mounted at `/etc/letsencrypt`. |
+| `CONFIG_ROOT` | `/srv/config` | Host directory holding every service's data, one folder per service (`CONFIG_ROOT/<service>/config` and beside it any other folder of the service's own; see [Volumes and mounts](#volumes-and-mounts)). Never a path inside `/var/lib/docker/volumes` ([installing.md](installing.md#where-data-lives)). |
 | `PROXY_NETWORK` | `homelab-ares_proxy` | Docker network Nginx Proxy Manager joins. Created once outside the stack (`docker network create`), so its address range survives rebuilding the stack. |
-| `UPTIME_KUMA_VOLUME` | `homelab-ares_uptime-kuma` | Docker volume with Uptime Kuma's database, mounted at `/app/data`. |
-| `PEANUT_CONFIG_PATH` | `/srv/appdata/peanut` | Host directory with PeaNUT's settings (including the NUT server's address and login) and its own login (`auth.yaml`, a bcrypt hash), mounted at `/config`. Must be writable by uid 1000, which PeaNUT runs as. |
-| `PORTAINER_VOLUME` | `homelab-ares_portainer` | Docker volume with Portainer's database, mounted at `/data`. |
 
-No secret is a setting. To adopt an existing installation, point each setting at the directory, volume or
-network it already uses ([installing.md](installing.md#adopting-existing-containers)).
+No secret is a setting. To adopt an existing installation, copy each service's data into its folder under
+`CONFIG_ROOT` and point `PROXY_NETWORK` at the network the old proxy uses
+([installing.md](installing.md#adopting-existing-containers)).
 
 ### `autoheal.env`
 
@@ -74,14 +71,16 @@ Exact versions and digests are in [`compose.yaml`](../compose.yaml).
 
 ## Volumes and mounts
 
+Every service's data is in a host directory under `CONFIG_ROOT`; the stack declares no Docker volumes.
+
 | Container path | Host source | Service |
 | --- | --- | --- |
-| `/data` | `NPM_DATA_PATH` | npm: settings database, proxy host configuration, logs (`/data/logs`, not backed up) |
-| `/etc/letsencrypt` | `NPM_LETSENCRYPT_PATH` | npm: TLS certificates and their private keys |
-| `/var/lib/logrotate` | volume `homelab-ares_npm-logrotate` (created by Compose, no setting) | npm: when each log in `/data/logs` was last rotated |
-| `/app/data` | volume `UPTIME_KUMA_VOLUME` | uptime-kuma: database |
-| `/config` | `PEANUT_CONFIG_PATH` | peanut: settings |
-| `/data` | volume `PORTAINER_VOLUME` | portainer: database, users, environments |
+| `/data` | `CONFIG_ROOT/npm/config` | npm: settings database, proxy host configuration, logs (`/data/logs`, not backed up) |
+| `/etc/letsencrypt` | `CONFIG_ROOT/npm/letsencrypt` | npm: TLS certificates, their private keys, the ACME account and any DNS-challenge credentials |
+| `/var/lib/logrotate` | `CONFIG_ROOT/npm/logrotate` | npm: when each log in `/data/logs` was last rotated |
+| `/app/data` | `CONFIG_ROOT/uptime-kuma/config` | uptime-kuma: database |
+| `/config` | `CONFIG_ROOT/peanut/config` | peanut: settings (including the NUT server's address and login) and its own login (`auth.yaml`, a bcrypt hash); must be writable by uid 1000, which PeaNUT runs as |
+| `/data` | `CONFIG_ROOT/portainer/config` | portainer: database, users, environments |
 | `/var/run/docker.sock` | the Docker socket | portainer (read-write), socket-proxy (read-only); allowed exceptions, see below |
 
 ## Networks
@@ -111,8 +110,8 @@ Exact versions and digests are in [`compose.yaml`](../compose.yaml).
 | `make test`, `make lint` | The checker's tests and the linters |
 | `scripts/backup.sh [DIR]` | Archives every service's data mounts (every read-write volume or bind mount except the Docker socket, anonymous volumes and the paths in the service's `backup.skip` label; a mount inside another mount is archived on its own and left out of the outer archive), `.env` and any `<service>.env` into `DIR` (default `backups/<date>-<time>`, gitignored) with a `MANIFEST`, `NETWORKS` (the address range of each network the stack uses but doesn't create), `VERSION` (the checkout's `git describe`) and `SHA256SUMS`, all mode `600`. Each service is stopped only while its own mounts are copied and started again (with any service Compose stopped along with it) before the copies are compressed (with `pigz` when it's installed, else `gzip`). Leaves out the paths a service's `org.honeybeartech.ares.backup.exclude` label lists. Waits for a deploy by the pull agent and holds its lock until it exits ([deploy lock](installing.md#deploy-lock)). Exit 0 = backup complete |
 | `scripts/scheduled-backup.sh` | Runs `scripts/backup.sh` into `BACKUP_DIR/<date>-<time>`, copies it to `BACKUP_REMOTE` with rsync (`SHA256SUMS` last), deletes all but the newest `BACKUP_REMOTE_KEEP` there and `BACKUP_KEEP` here, and reports to `BACKUP_PING_URL` ([`backup.env`](#backupenv)). Run nightly by the systemd user units in `deploy/systemd/`. Exit 0 = backup complete and copied |
-| `scripts/restore.sh [--yes] DIR [SERVICE...]` | Verifies `DIR/SHA256SUMS`, checks the `MANIFEST`, creates missing containers and volumes, asks for confirmation (unless `--yes`), stops the services, replaces the contents of each listed mount with its archive (owners and modes kept), and starts what was running. Writes only mounts the service still has read-write; never the Docker socket, a path in the service's `backup.skip` label, another mount inside the one it restores, or a path in its `backup.exclude` label. Takes the pull agent's lock first, as `backup.sh` does |
-| `make smoke` | `scripts/smoke-test.sh`: starts every service under a separate Compose project with throwaway directories, volumes and networks, no fixed container names, no published ports and no env files; waits until all are healthy, checks that Uptime Kuma can ping, round-trips a backup and restore over every data mount, runs the scheduled backup against a stand-in backup server, makes a test container unhealthy and checks that autoheal restarts it, then removes what it created. Exit 0 = all passed |
+| `scripts/restore.sh [--yes] DIR [SERVICE...]` | Verifies `DIR/SHA256SUMS`, checks the `MANIFEST`, creates missing containers, asks for confirmation (unless `--yes`), stops the services, recreates a container made from an older `compose.yaml` (a missing directory is created), replaces the contents of what the service mounts at each listed container path now with its archive (owners and modes kept; a backup of a Docker volume restores into the directory that replaced it), and starts what was running. Writes only mounts the service still has read-write; never the Docker socket, a path in the service's `backup.skip` label, another mount inside the one it restores, or a path in its `backup.exclude` label. Takes the pull agent's lock first, as `backup.sh` does |
+| `make smoke` | `scripts/smoke-test.sh`: starts every service under a separate Compose project with throwaway directories (`CONFIG_ROOT` among them), volumes and networks, no fixed container names, no published ports and no env files; waits until all are healthy, checks that Uptime Kuma can ping, round-trips a backup and restore over every data mount (one service's through a recreated container into a config directory that was removed), runs the scheduled backup against a stand-in backup server, makes a test container unhealthy and checks that autoheal restarts it, then removes what it created. Exit 0 = all passed |
 
 ## Outbound connections
 

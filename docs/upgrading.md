@@ -15,8 +15,8 @@ with a backup**. The same steps apply to updating a checkout of `main` by hand; 
 
 ## Backing up
 
-The state worth keeping is each service's data: every read-write volume or directory it mounts (the proxy's
-settings and certificates, Uptime Kuma's database, PeaNUT's settings, Portainer's database). `scripts/backup.sh`
+The state worth keeping is each service's data: every read-write directory it mounts from `CONFIG_ROOT` (the
+proxy's settings and certificates, Uptime Kuma's database, PeaNUT's settings, Portainer's database). `scripts/backup.sh`
 stops one service at a time, copies its mounts while it is stopped so its database is consistent, and starts it
 again if it was running before compressing the copies; services with nothing to archive keep running. Nginx Proxy Manager's logs (`/data/logs`)
 are left out: they grow without limit, aren't needed to rebuild it, and would keep the proxy down for as long as
@@ -113,4 +113,4 @@ those services while it works and starts again the ones that were running; `--ye
 ## Restoring on a new host
 
 See [rebuilding.md](rebuilding.md): install the host, restore `.env`, then `scripts/restore.sh` creates the
-volumes and containers and fills them from the backup.
+containers and fills their folders under `CONFIG_ROOT` from the backup.
