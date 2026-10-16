@@ -40,6 +40,14 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Fixed
 
+- `scripts/backup.sh` no longer leaves a service down when stopping it fails. A process that can't exit in time
+  (stuck writing to a network share) made the stop fail while its container was still on its way down; the backup
+  gave up, started the services again at once (Compose skipped the container, which still ran) and the service stayed
+  stopped once it exited, as `restart: unless-stopped` doesn't restart after a stop. The rest of the backup and the
+  copy off the host were never made. Now the backup waits up to `BACKUP_STOP_WAIT` seconds (default 120) for the
+  container to exit and carries on; if it still runs then, the backup fails and waits once more before starting
+  anything. Every service that was running when the backup began must be running again at the end, or the backup
+  fails and names it (the scheduled backup reports that to the push monitor).
 - `scripts/backup.sh` and `scripts/restore.sh` no longer race a deploy by the pull agent: before stopping anything
   they wait for a deploy in progress to finish (up to 30 minutes, then they fail with nothing stopped), and they
   hold the agent's lock until they exit, so the agent skips its runs meanwhile and deploys right after. On a host without the agent (no `homelab-pull/ares` state directory) nothing changes; where
