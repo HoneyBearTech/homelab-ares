@@ -55,6 +55,9 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Changed
 
+- Portainer CE 2.45.3, a patch of the 2.45 long-term-support release. It fixes 4 of the image scan's 9 findings
+  in Portainer (Go standard library, `x/net`); the containerd, BuildKit, `docker/cli` and `go-archive` ones wait for
+  upstream. Its agents on other hosts can stay on 2.45.2 (same release line).
 - Every service's data moves to one host directory, `CONFIG_ROOT`, one folder per service: its settings and database
   in `CONFIG_ROOT/<service>/config`, still mounted at the same container path, and Nginx Proxy Manager's
   certificates and log-rotation state beside them in `CONFIG_ROOT/npm/letsencrypt` and `CONFIG_ROOT/npm/logrotate`

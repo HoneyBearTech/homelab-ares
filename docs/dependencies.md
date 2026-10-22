@@ -96,7 +96,7 @@ module in Portainer and one in the `cloudflared` binary that Uptime Kuma bundles
 | Uptime Kuma `2.5.6-slim` | 143 (7) | No: the newest release, and its tag hasn't been rebuilt | Wait for upstream; **watch** its base image (below) |
 | Nginx Proxy Manager `2.16.0` | 62 (1) | No: the newest release (24 September), not rebuilt since | Wait for upstream |
 | PeaNUT `6.0.0` | 25 (3) | **Yes**: 6.1.0, merged on 21 October (#43). A scan of its digest finds nothing: it ships Next.js 16.3.8, sharp 0.35.5 and Debian 13.7 | Done. The alerts close at the next weekly scan: a merge by Dependabot's auto-merge doesn't start the scan |
-| Portainer `2.45.2-alpine` | 9 (0) | Partly: 2.45.3 (21 October) fixes 4 (Go standard library, `x/net`) | Waits for the maintainer, like every Portainer update |
+| Portainer `2.45.2-alpine` | 9 (0) | Partly: 2.45.3 (21 October) fixes 4 (Go standard library, `x/net`) | Updated to 2.45.3 on 22 October (the maintainer's decision); the other 5 wait for upstream |
 | autoheal, socket-proxy | 0 | | |
 
 The next weekly scan (26 October) will also report what Trivy's database learnt after 19 October: 52 more alerts in
