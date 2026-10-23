@@ -83,7 +83,8 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
   `org.honeybeartech.ares.backup.exclude` label lists (npm's `/data/logs`) are left out of the archive. Each
   service is stopped only while its data is copied; compression (pigz or gzip) runs after it starts again.
   `restore.sh` only writes mounts listed in the backup's MANIFEST that the service still mounts read-write, never
-  a skipped mount, and leaves excluded paths and nested mounts in place. It writes to what compose.yaml mounts at
+  a skipped mount, and leaves excluded paths and nested mounts in place; a service that bind-mounts a folder inside a
+  mount it restores is stopped and started again with it. It writes to what compose.yaml mounts at
   that container path now (recreating a container made from an older compose.yaml, creating a missing directory), so
   a backup of an old volume restores into its `CONFIG_ROOT` folder. Keep it that way when adding a service.
 

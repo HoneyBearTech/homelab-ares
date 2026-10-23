@@ -52,8 +52,17 @@ All notable changes to homelab-ares are documented here. The format follows
   they wait for a deploy in progress to finish (up to 30 minutes, then they fail with nothing stopped), and they
   hold the agent's lock until they exit, so the agent skips its runs meanwhile and deploys right after. On a host without the agent (no `homelab-pull/ares` state directory) nothing changes; where
   it runs, `flock` is needed ([docs/installing.md](docs/installing.md#deploy-lock)).
+- `scripts/restore.sh` stops a service that bind-mounts a folder inside a mount it restores, and starts it again
+  afterwards. Such a container kept seeing the folder the restore had replaced, deleted, until it restarted (found on
+  homelab-hyperion, whose Steerhouse worker reads the API's Galaxy folder). No service here does that today; the smoke
+  test now checks it with a test container that follows another service's folder.
 
 ### Changed
+
+- The smoke test runs a stack's own steps from `scripts/smoke-stack.sh` when that exists (`smoke_prepare` before the
+  services start, `smoke_check` once they are healthy and again after the restore), gives a `*_SUBNET` setting a free
+  address range, and leaves a service with Docker secrets out of the restore's "recreated with older settings" check.
+  None of these is in use here; they keep the stacks' tooling the same.
 
 - Portainer CE 2.45.3, a patch of the 2.45 long-term-support release. It fixes 4 of the image scan's 9 findings
   in Portainer (Go standard library, `x/net`); the containerd, BuildKit, `docker/cli` and `go-archive` ones wait for

@@ -8,10 +8,11 @@
 # Without SERVICE, every service that has an archive in DIR is restored. The checksums are verified first, and it
 # asks for confirmation (unless --yes) after listing what it will overwrite. It only writes to a container path
 # the service still mounts read-write, never to the Docker socket or a path the service excludes from backups, and
-# leaves the paths a service's exclude label lists inside a mount as they are. An archive goes to whatever
-# compose.yaml mounts at its service's container path now, whatever source the MANIFEST names (a backup of a Docker
-# volume restores into the directory that replaced it): a container created from an older compose.yaml is
-# recreated first, and a directory that doesn't exist yet is created. On a new host, restore .env from DIR/env
+# leaves the paths a service's exclude label lists inside a mount as they are. A service that bind-mounts a folder
+# inside a mount being restored is stopped and started again with it, so it sees the restored folder. An archive goes
+# to whatever compose.yaml mounts at its service's container path now, whatever source the MANIFEST names (a backup
+# of a Docker volume restores into the directory that replaced it): a container created from an older compose.yaml
+# is recreated first, and a directory that doesn't exist yet is created. On a new host, restore .env from DIR/env
 # first; the containers, and the volumes and directories they mount, are created as needed. Uses `docker compose`
 # from the checkout, so the standard Compose variables select another project, as in scripts/backup.sh.
 set -euo pipefail
@@ -120,6 +121,33 @@ if ! $yes; then
   }
 fi
 
+# Services that bind-mount a folder inside a mount being restored (a worker reading another service's folder, say)
+# would keep seeing that folder as it was, deleted, until they start again: they are stopped with the services
+# restored, and started again with them.
+restored_sources=""
+for entry in "${entries[@]}"; do
+  IFS=$'\t' read -r archive service mount <<<"$entry"
+  restored_sources+=$(data_mounts "$(docker compose ps --all --quiet "$service")" |
+    awk -F '\t' -v m="$mount" '$1 == m { print $2 }')$'\n'
+done
+followers=""
+for service in $(docker compose config --services); do
+  if [[ $'\n'"$services"$'\n' == *$'\n'"$service"$'\n'* ]]; then continue; fi
+  id=$(docker compose ps --all --quiet "$service")
+  [ -n "$id" ] || continue
+  while IFS= read -r source; do
+    while IFS= read -r restored; do
+      if [ -n "$restored" ] && [[ "$source" == "$restored"/* ]]; then
+        followers="$followers $service"
+        break 2
+      fi
+    done <<<"$restored_sources"
+  done < <(docker inspect --format '{{range .Mounts}}{{if eq .Type "bind"}}{{.Source}}{{"\n"}}{{end}}{{end}}' "$id")
+done
+if [ -n "$followers" ]; then
+  echo "Also stopping, and starting again afterwards:$followers (they mount a folder inside the data restored)"
+fi
+
 running=$(docker compose ps --services --status running)
 restart() {
   status=$?
@@ -132,7 +160,7 @@ restart() {
 }
 trap restart EXIT
 # shellcheck disable=SC2086 # one service name per word
-docker compose stop $services
+docker compose stop $services $followers
 
 if [ -n "$stale" ]; then
   echo "Recreating from compose.yaml:$stale"
