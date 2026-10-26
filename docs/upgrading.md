@@ -40,7 +40,8 @@ settings under `env/`, a `MANIFEST` naming each archive's service, container pat
 `SHA256SUMS`. Everything in it is readable only by the user who ran the backup. **Copy it off the host**: it
 contains the certificates' private keys and every service's logins. Every service needs a container for the backup
 to read from, so run it on an installed stack. The Docker socket and anonymous volumes are never archived.
-[Scheduled backups](installing.md#scheduled-backups) do this nightly and copy each backup off the host.
+[Scheduled backups](installing.md#scheduled-backups) do this nightly and copy each backup off the host, encrypted
+with age when `BACKUP_AGE_RECIPIENT` is set.
 
 ## Upgrading
 
@@ -120,3 +121,8 @@ those services while it works and starts again the ones that were running; `--ye
 
 See [rebuilding.md](rebuilding.md): install the host, restore `.env`, then `scripts/restore.sh` creates the
 containers and fills their folders under `CONFIG_ROOT` from the backup.
+
+A backup copied off the host with `BACKUP_AGE_RECIPIENT` set is encrypted to that age key: restoring from it needs
+**the private key**, on the machine that holds it (`age -d -i ares-backup.key backup.tar.age | tar -x` gives back the
+backup directory; [rebuilding.md](rebuilding.md#3-the-backup)). The backups in `BACKUP_DIR` on the host aren't
+encrypted.

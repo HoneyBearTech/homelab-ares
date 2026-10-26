@@ -38,8 +38,21 @@ All notable changes to homelab-ares are documented here. The format follows
 - Backups taken while the data was in volumes and the old directories restore as they are: `scripts/restore.sh` puts
   each archive into the service's folder under `CONFIG_ROOT`.
 
+### Added
+
+- An encrypted copy off the host for the scheduled backup: with `BACKUP_AGE_RECIPIENT` (an age public key) in
+  `backup.env`, only `backup.tar.age` and its `SHA256SUMS` leave the host, and only the private key's holder can
+  read them (`age -d -i <key> backup.tar.age | tar -x`). Needs `age` on the host; optional, and without it the
+  backup is copied as before. The smoke test checks that only the archive leaves, that the key opens it into the
+  backup `scripts/restore.sh` reads, and that another key doesn't.
+
 ### Fixed
 
+- The smoke test's restore into a removed config directory also runs for a stack built from this one where only one
+  service keeps its data in `CONFIG_ROOT/<service>/config`; it used to fail with "no service keeps only its config
+  directory". Ares has several such services and isn't affected.
+- CI's smoke test always logs out of Docker Hub after pulling the images, also when it pulled anonymously on a runner
+  image that comes with a Docker Hub entry of its own.
 - `scripts/backup.sh` no longer leaves a service down when stopping it fails. A process that can't exit in time
   (stuck writing to a network share) made the stop fail while its container was still on its way down; the backup
   gave up, started the services again at once (Compose skipped the container, which still ran) and the service stayed

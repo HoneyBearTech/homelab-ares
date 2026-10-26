@@ -112,7 +112,8 @@ only commit or push it when the owner asks. The old in-repo vault path `.obsidia
 - `scripts/check_compose.py`: Python 3.14, standard library only. Reads `docker compose config --format json`,
   reports policy violations (exit 1), `--sbom FILE` writes a CycloneDX 1.6 SBOM of the images.
 - `scripts/scheduled-backup.sh` (run nightly by the systemd user units in `deploy/systemd/`): backup.sh, then rsync
-  to `BACKUP_REMOTE`, pruning and an Uptime Kuma push. Its settings are in the gitignored `backup.env` (read as
+  to `BACKUP_REMOTE` (with `BACKUP_AGE_RECIPIENT`, only `backup.tar.age` + `SHA256SUMS`, encrypted to that age key;
+  CI installs age so the smoke test covers it), pruning and an Uptime Kuma push. Its settings are in the gitignored `backup.env` (read as
   data, never sourced), not `.env`. It needs GNU rsync and macOS' openrsync alike (no `--chmod`).
 - `scripts/backup.sh`, `restore.sh`, `scheduled-backup.sh`, `smoke-test.sh` (helpers in `lib.sh`): bash, must also
   run on macOS' bash 3.2 (no `mapfile`, no associative arrays).

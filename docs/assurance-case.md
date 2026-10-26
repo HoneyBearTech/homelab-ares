@@ -11,7 +11,7 @@ the secure design principles it follows, and how common weaknesses are countered
 | The host and every agent host | Portainer's login or Portainer itself compromised | Socket access limited to Portainer as a labelled exception; admin UI on the LAN only; strong unique password; updates through Dependabot |
 | The proxied services | Traffic intercepted or a service exposed by mistake | TLS on the proxy; access lists for LAN-only services; admin ports kept off the internet ([installing.md](installing.md#running-it-securely)) |
 | TLS private keys, logins, tokens | Committed to the public repository | Kept in the services' data, never in the repo; `.gitignore`; gitleaks over the history in CI; GitHub push protection |
-| TLS private keys, logins, tokens | Leaked through a backup | `scripts/backup.sh` writes backups readable only by the user who ran it; documented as secret, to be kept off the host |
+| TLS private keys, logins, tokens | Leaked through a backup | `scripts/backup.sh` writes backups readable only by the user who ran it; documented as secret, to be kept off the host; the scheduled copy off the host can be encrypted with age to a key that isn't on the host (`BACKUP_AGE_RECIPIENT`) |
 | The services' data | An upgrade that migrates and breaks it | `scripts/backup.sh` nightly, and before every update merged by hand; rollback = a revert (or the old tag) + `scripts/restore.sh`, both exercised by the CI smoke test |
 | The host | A bad change merged to `main` deploying by itself | The required checks (policy check, smoke test on arm64) pass before any merge; Portainer updates and updates Dependabot can't classify are merged by hand; the pull agent only fast-forwards and backs out a change that doesn't resolve or pull; rollback is a revert pull request |
 | The host | A container breaking out through the Docker socket | The `docker-socket` rule; only Portainer and socket-proxy mount it, as labelled exceptions; autoheal reaches Docker only through socket-proxy, which allows listing, inspecting, restarting and stopping containers, on an internal network |
@@ -72,7 +72,8 @@ who already has root or `docker` group access on the host, or write access to `.
 
 - CI on every change: ruff (with the bandit rules), yamllint, actionlint, gitleaks over the history,
   shellcheck, pytest with a 90 % branch-coverage floor, `docker compose config`, the policy check, and a smoke
-  test on arm64 that starts every pinned image, waits for its health check, round-trips a backup and restore and
+  test on arm64 that starts every pinned image, waits for its health check, round-trips a backup and restore,
+  checks the encrypted copy off the host (only the archive leaves, the right key opens it, another doesn't) and
   proves that autoheal restarts an unhealthy container (a dynamic test of the stack and the scripts).
 - A weekly Trivy scan of every pinned image, and on every change to `compose.yaml`, into code scanning.
 - CodeQL (Python and Actions) on every pull request and weekly; OpenSSF Scorecard weekly; dependency
