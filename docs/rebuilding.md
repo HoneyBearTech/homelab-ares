@@ -6,11 +6,12 @@ service's settings, certificates and history as they were, and with the proxy's 
 so access lists that allow its gateway keep working.
 
 The backup and restore scripts run end to end in CI on every change: the smoke test backs up the running stack,
-changes it, restores it and checks the result, and copies a scheduled backup to a stand-in backup server.
-[Rehearse](#rehearsing-a-rebuild) the steps below on a scratch machine before you need them.
+changes it, restores it and checks the result, and copies a scheduled backup, plain and encrypted with age, to a
+stand-in backup server. [Rehearse](#rehearsing-a-rebuild) the steps below on a scratch machine before you need them.
 
-You need: a backup (copied off the old host, or on the backup server), this repository, and a 64-bit machine;
-the reference is **Debian 13 on arm64**.
+You need: a backup (copied off the old host, or on the backup server), **the age private key** it was encrypted to
+if the copies off the host are encrypted (`BACKUP_AGE_RECIPIENT`), this repository, and a 64-bit machine; the
+reference is **Debian 13 on arm64**.
 
 ## 1. The operating system
 
@@ -58,6 +59,20 @@ cat ~/restore/NETWORKS     # the proxy's network: name, address range, gateway
 
 Keep `~/restore` private: it holds every login and private key. Backups made before `VERSION` and `NETWORKS`
 existed lack them; the stack still restores, but the proxy's network gets a new address range (step 4).
+
+**An encrypted copy** (the folder holds only `backup.tar.age` and `SHA256SUMS`) is opened on the machine that holds
+the age private key, never on the backup server or the new host. Copy it there and check it the same way, then
+decrypt it, which gives the backup directory as it was written on the old host, and copy that to the new host:
+
+```sh
+rsync -rlpt backup-host:/volume1/<folder>/<date>-<time>/ ~/sealed/
+cd ~/sealed && sha256sum -c --quiet SHA256SUMS && cd -
+(umask 077 && age -d -i ares-backup.key ~/sealed/backup.tar.age | tar -x -C ~)   # ~/<date>-<time>/
+rsync -rlpt ~/<date>-<time>/ <you>@<the new host>:restore/
+rm -rf ~/sealed ~/<date>-<time>
+```
+
+Then check `~/restore` on the new host as above.
 
 ## 4. The repository and settings
 

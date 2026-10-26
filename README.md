@@ -97,7 +97,8 @@ Ports, volumes and labels: [docs/interfaces.md](docs/interfaces.md).
   paired with it: treat its login like a root password. autoheal never gets the socket: it goes through a proxy
   that only lets it list, inspect, restart and stop containers.
 - Secrets (logins, API tokens, TLS private keys, the NUT login) live only in each service's data, never in this
-  repository or `.env`. Backups contain them: keep them private and off the host.
+  repository or `.env`. Backups contain them: keep them private and off the host, and encrypt the copy that leaves it
+  (`BACKUP_AGE_RECIPIENT`).
 - Don't run an auto-updater such as Watchtower on these containers; upgrade from this repository instead (a
   release, or `main`).
 - The policy check refuses privileged containers, added capabilities, host networking and Docker socket

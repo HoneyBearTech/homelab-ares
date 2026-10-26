@@ -22,8 +22,8 @@ live. The reasoning behind these requirements is in the [assurance case](assuran
 5. **Releases are verifiable.** Release files are listed in a `SHA256SUMS` signed keylessly by the release
    workflow, with SLSA provenance and an SBOM of the pinned images ([verifying-releases.md](verifying-releases.md)).
 6. **Backups don't leak.** `scripts/backup.sh` writes archives readable only by the user who ran it (the scheduled
-   copy off the host keeps those modes), and
-   `scripts/restore.sh` writes only the mounts the backup's checksummed `MANIFEST` lists and the service still
+   copy off the host keeps those modes). With `BACKUP_AGE_RECIPIENT` set, that copy is encrypted to an age key whose
+   private half isn't on this host, so the backup server holds nothing it can read. `scripts/restore.sh` writes only the mounts the backup's checksummed `MANIFEST` lists and the service still
    has, never the Docker socket.
 
 ## Policy
@@ -84,9 +84,12 @@ since their images offer nothing else. Without capabilities that root can only r
   that keeps a hung service available but can hide a real fault. Restarts are logged (and sent to the webhook if
   one is set).
 - **Backups off the host from the host itself.** The scheduled backup can delete old backups on the backup
-  server, so whoever controls this host can delete or overwrite them too. Snapshots or a versioned copy on the
-  backup server, outside this host's reach, are what protect them; a recycle bin may not see deletions made over
-  rsync (Synology's doesn't).
+  server, so whoever controls this host can delete or overwrite them too (though not read them, when they're
+  encrypted). Snapshots or a versioned copy on the backup server, outside this host's reach, are what protect them;
+  a recycle bin may not see deletions made over rsync (Synology's doesn't). The backups in `BACKUP_DIR` on the host
+  aren't encrypted.
+- **The age private key.** With `BACKUP_AGE_RECIPIENT` set, whoever has it can read every backup copied off the
+  host; whoever loses it can read none. Keeping it is the operator's job.
 - **The host.** Anyone with root, `docker` group membership or write access to `.env` or the services' data
   controls the stack; those are trusted.
 - **Upstream images' internals.** Some images run as root inside the container; that is the image's design and
@@ -105,4 +108,5 @@ since their images offer nothing else. Without capabilities that root can only r
 | autoheal's webhook URL | `autoheal.env` (mode `600`, gitignored) | same |
 | The backup push monitor's URL | `backup.env` (mode `600`, gitignored) | same |
 | The key for the backup server | the backup user's `~/.ssh` on the host | same |
-| Backups of the data | off the host, mode `600` | anywhere public |
+| The age private key for the backups (`BACKUP_AGE_RECIPIENT`) | off this host, with the operator's recovery secrets | this host, the backup server, anywhere public |
+| Backups of the data | on the host and off it mode `600`; off the host encrypted with age when `BACKUP_AGE_RECIPIENT` is set | anywhere public |
