@@ -81,7 +81,7 @@ services:
     <<: *defaults
     # The slim image: without the bundled Chromium (no "Real Browser" monitors) and embedded MariaDB (the database
     # is SQLite), which carried almost all of the image's known vulnerabilities.
-    image: louislam/uptime-kuma:2.5.6-slim@sha256:5db97dbbef610276e1699f3ece586c3509c8fd35de75d45ff5109761a1b377dc
+    image: louislam/uptime-kuma:2.5.7-slim@sha256:4837e2b531b118d2fad24430fabed1488b14542f03b2bebf035497271b3a1ee8
     container_name: uptime-kuma
     # It runs as root but its data directory belongs to uid 1000 (DAC_OVERRIDE), and the image's ping carries the
     # NET_RAW file capability, which Linux refuses to run without it (ping monitors).
