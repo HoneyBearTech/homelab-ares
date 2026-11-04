@@ -106,7 +106,7 @@ services:
     # Runs as uid 1000 and keeps its login in /config/auth.yaml, so CONFIG_ROOT/peanut/config must be writable by
     # uid 1000.
     # Its API, metrics included, needs that login (HTTP Basic auth works for scrapers); /api/ping stays open.
-    image: brandawg93/peanut:6.1.1@sha256:974c485e25df4d4031e1a1a430cc595d7e0eabe3be3207233e9ad4432e0811be
+    image: brandawg93/peanut:6.1.2@sha256:b58b9627f77448f25e29f772870ee01f0f5a245c6ad7d6e0d7f620d1bb0fb623
     container_name: PeaNUT
     environment:
       TZ: ${TZ:?set TZ in .env}
