@@ -72,6 +72,8 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Changed
 
+- Dependabot auto-merge uses the Dependabot secret `AUTO_MERGE_TOKEN` when set (falling back to `GITHUB_TOKEN`), so
+  updates that change workflow files can merge and a merge starts the push workflows. See `docs/dependencies.md`.
 - The smoke test runs a stack's own steps from `scripts/smoke-stack.sh` when that exists (`smoke_prepare` before the
   services start, `smoke_check` once they are healthy and again after the restore), gives a `*_SUBNET` setting a free
   address range, and leaves a service with Docker secrets out of the restore's "recreated with older settings" check.

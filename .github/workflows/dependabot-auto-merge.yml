@@ -5,6 +5,12 @@ name: Dependabot auto-merge
 # the Compose policy check, CodeQL, dependency review, signed commits). Nothing is checked out or run from the PR;
 # the job only reads Dependabot's metadata and the PR's diff and calls `gh`. A merge deploys: the server's pull
 # agent applies main within minutes (docs/upgrading.md).
+#
+# `gh pr merge --auto` runs with the Dependabot secret AUTO_MERGE_TOKEN when it is set (a fine-grained token or
+# GitHub App token with contents, pull requests and workflows write), else with GITHUB_TOKEN. GITHUB_TOKEN can't
+# merge a PR that changes a workflow file, and a merge made with it starts no push workflows (CI, CodeQL, Scorecard,
+# the image scan don't run on main afterwards). The token only enables auto-merge; the required checks still decide.
+# It must be a Dependabot secret: Dependabot-triggered runs can't read Actions secrets.
 on: pull_request
 
 permissions:
@@ -40,7 +46,7 @@ jobs:
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN || secrets.GITHUB_TOKEN }}
 
       # Image rebuilds: the same tag with a new digest (a linuxserver.io `version-<app version>` or bare version tag
       # moving to a rebuild of the same app version), which Dependabot doesn't classify (owner 2026-10-14, as on
@@ -72,4 +78,4 @@ jobs:
           fi
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN || secrets.GITHUB_TOKEN }}
