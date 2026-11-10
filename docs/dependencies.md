@@ -48,6 +48,10 @@ Each release carries a CycloneDX SBOM listing every service's image and digest
 - **Major updates merge automatically too** (the maintainer's decision, 2026-10-14), so they reach the
   maintainer's server unattended. A new major version can migrate a service's data one way: the nightly backup
   is the way back, since a revert alone doesn't undo the migration.
+- **Merge token**: the workflow enables auto-merge with the Dependabot secret `AUTO_MERGE_TOKEN` (a fine-grained
+  token or GitHub App token with contents, pull requests and workflows write) when it is set, else with
+  `GITHUB_TOKEN`. The default token can't merge a pull request that changes a workflow file, and a merge made with
+  it starts no push workflows, so CodeQL, Scorecard and the image scan wouldn't run on `main` afterwards.
 - **Merged by hand**: any update Dependabot can't classify as patch, minor or major, and every Portainer update
   (its server and the agents on the other hosts move together).
 - **A merge deploys.** The maintainer's server follows `main` with a pull agent, so every merge, the automatic
