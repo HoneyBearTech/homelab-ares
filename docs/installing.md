@@ -9,8 +9,8 @@ The [quick start](quick-start.md) is the short version of this page.
   publish `linux/arm64` and `linux/amd64`.
 - A user in the `docker` group to run `docker compose`. Membership is equivalent to root on the host, so keep
   that group small.
-- Ports 80 and 443 free and reachable from the clients that use the proxy (and, for Let's Encrypt's HTTP
-  challenge, from the internet on port 80).
+- Ports 80, 443, 81, 3001, 8080 and 9443 free. Ports 80 and 443 must be reachable from the clients that use the
+  proxy (and, for Let's Encrypt's HTTP challenge, from the internet on port 80).
 - Little disk: the services' data is small, but Nginx Proxy Manager's logs grow. It rotates them weekly and keeps
   four compressed weeks, so a busy proxy can still write a gigabyte or more in a week; watch the free space on
   small boards.
