@@ -8,12 +8,12 @@ the secure design principles it follows, and how common weaknesses are countered
 | Asset | Threat | Countered by |
 | --- | --- | --- |
 | The host | A compromised or malicious image | Digest pins; versions change only by reviewed pull request; no privileged, capability, host-namespace or socket access without a reasoned label |
-| The host and every agent host | Portainer's login or Portainer itself compromised | Socket access limited to Portainer as a labelled exception; admin UI on the LAN only; strong unique password; updates through Dependabot |
+| The host and every agent host | Portainer's login or Portainer itself compromised | Socket access limited to Portainer as a labelled exception; admin UI on the LAN only; strong unique password; updates through reviewed Renovate pull requests |
 | The proxied services | Traffic intercepted or a service exposed by mistake | TLS on the proxy; access lists for LAN-only services; admin ports kept off the internet ([installing.md](installing.md#running-it-securely)) |
 | TLS private keys, logins, tokens | Committed to the public repository | Kept in the services' data, never in the repo; `.gitignore`; gitleaks over the history in CI; GitHub push protection |
 | TLS private keys, logins, tokens | Leaked through a backup | `scripts/backup.sh` writes backups readable only by the user who ran it; documented as secret, to be kept off the host; the scheduled copy off the host can be encrypted with age to a key that isn't on the host (`BACKUP_AGE_RECIPIENT`) |
 | The services' data | An upgrade that migrates and breaks it | `scripts/backup.sh` nightly, and before every update merged by hand; rollback = a revert (or the old tag) + `scripts/restore.sh`, both exercised by the CI smoke test |
-| The host | A bad change merged to `main` deploying by itself | The required checks (policy check, smoke test on arm64) pass before any merge; Portainer updates and updates Dependabot can't classify are merged by hand; the pull agent only fast-forwards and backs out a change that doesn't resolve or pull; rollback is a revert pull request |
+| The host | A bad change merged to `main` deploying by itself | The required checks (policy check, smoke test on arm64) pass before any merge; the maintainer reviews and merges every update; the pull agent only fast-forwards and backs out a change that doesn't resolve or pull; rollback is a revert pull request |
 | The host | A container breaking out through the Docker socket | The `docker-socket` rule; only Portainer and socket-proxy mount it, as labelled exceptions; autoheal reaches Docker only through socket-proxy, which allows listing, inspecting, restarting and stopping containers, on an internal network |
 | Availability | A service hangs without exiting | A health check on every service; autoheal restarts an unhealthy one (and can notify a webhook); a long start period keeps it from interrupting a migration |
 | The services' data | A crafted backup writing outside the services' data | `restore.sh` verifies `SHA256SUMS` (which covers the `MANIFEST`), accepts only plain archive names and absolute container paths without `..`, refuses the Docker socket, and writes only a mount the service has read-write |
@@ -64,7 +64,7 @@ who already has root or `docker` group access on the host, or write access to `.
 | CWE-250 (unnecessary privileges) | Container settings | Policy rules `privileged`, `no-new-privileges`, `cap-drop`, `cap-add`, `host-*`, `docker-socket`; read-only root filesystems where the images allow it |
 | CWE-1393 (default passwords) | Nginx Proxy Manager's first start | Documented as the first step of setup ([quick-start.md](quick-start.md)) |
 | CWE-22 (path traversal) | Restoring a backup | `restore.sh` validates archive names and mount paths from the checksummed `MANIFEST` |
-| CWE-1104 (unmaintained third-party components) | Images, tools, Actions | Dependabot weekly; image scan; triage SLAs ([dependencies.md](dependencies.md)) |
+| CWE-1104 (unmaintained third-party components) | Images, tools, Actions | Renovate weekly; image scan; triage SLAs ([dependencies.md](dependencies.md)) |
 | CWE-77/78 (injection) | Workflows, scripts | Untrusted values only via `env:`; actionlint and shellcheck; CodeQL for Actions |
 | CWE-20 (improper input validation) | The checker's input | It reads JSON only with the standard library, never evaluates it, and exits 2 on anything that isn't a JSON object |
 
