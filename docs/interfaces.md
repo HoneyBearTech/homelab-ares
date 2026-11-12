@@ -54,6 +54,7 @@ with the pull agent; nothing needs setting on a normal host.
 | --- | --- | --- |
 | `HOMELAB_PULL_STATE_DIR` | `$XDG_STATE_HOME/homelab-pull` | The pull agent's state root, as the agent reads it. If it has no `ares` directory, no lock is taken. |
 | `XDG_STATE_HOME` | `~/.local/state` | Used for the state root when `HOMELAB_PULL_STATE_DIR` isn't set. |
+| `BACKUP_STOP_WAIT` | `120` seconds | How long `scripts/backup.sh` waits for a service container that is still stopping before treating the stop as failed. |
 
 ## Services and ports
 
