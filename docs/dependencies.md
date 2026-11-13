@@ -35,9 +35,10 @@ Each release carries a CycloneDX SBOM listing every service's image and digest
 ## Tracking dependencies
 
 - **Renovate** ([`renovate.json`](../renovate.json)) runs before 06:00 each Monday in `America/Chicago` and
-  proposes updates for the root Compose file, pip requirements, and GitHub Actions, covering all three entries
-  formerly configured in Dependabot. Minor and patch updates are grouped; major updates use a separate group
-  with a `major` label. The dependency dashboard tracks pending work. CI and required review apply to every PR.
+  proposes updates for the root Compose file, pip requirements, GitHub Actions, GitLab CI images, and pre-commit
+  hooks, covering all three entries formerly configured in Dependabot. Minor and patch updates are grouped;
+  major updates have individual PRs with a `major` label. The dependency dashboard tracks pending work. CI and
+  required review apply to every PR.
 - **No automatic merging**: `automerge` is explicitly false. The maintainer reviews and merges every update,
   including image rebuilds, Portainer changes, and majors. A new major can migrate service data one way, so the
   maintainer takes a backup before merging; a revert alone doesn't undo that migration.
@@ -50,8 +51,8 @@ Each release carries a CycloneDX SBOM listing every service's image and digest
 - **Dependency review** ([`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml))
   blocks a pull request that adds or changes a Python or Actions dependency with a known vulnerability of
   moderate severity or higher, or a license outside the allowlist.
-- The CI-only images in `run:` steps, the images in `.gitlab-ci.yml` and the scripts' busybox image aren't in
-  Renovate's configured managers; they're bumped by hand at least every quarter.
+- The CI-only images in workflow `run:` steps and the scripts' busybox image aren't in Renovate's configured
+  managers; they're bumped by hand at least every quarter.
 - **Nothing on the host updates from a registry.** Auto-updaters such as Watchtower are not used: they would run
   versions nobody reviewed. The pull agent only applies commits merged into `main`.
 
