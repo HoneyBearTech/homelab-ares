@@ -57,9 +57,11 @@ The services store their container paths, not the host's, so `CONFIG_ROOT` can m
    [verifying-releases.md](verifying-releases.md)).
 2. Create `.env` from `.env.example` (mode `600`) and set every value. Optionally create `autoheal.env` from
    `autoheal.env.example` (mode `600`) with a webhook URL for restart notices.
-3. Create the service folders under `CONFIG_ROOT` as your user (the [quick start](quick-start.md) step 3 lists
-   them; PeaNUT's owned by uid 1000) and the proxy's network (`docker network create "$PROXY_NETWORK"`), then
-   `docker compose up -d --wait`. A folder you didn't create is created by Docker, owned by root.
+3. Create the service folders under `CONFIG_ROOT` with permission to write there (the [quick start](quick-start.md)
+   step 3 uses `sudo` for the default location and changes only PeaNUT's directory to uid 1000). Source the trusted
+   local `.env` in the current shell before creating the folders and the proxy's network
+   (`docker network create "$PROXY_NETWORK"`), then `docker compose up -d --wait`. New directories are owned by
+   root unless explicitly changed; a folder you didn't create is also created by Docker, owned by root.
 
 ### Adopting existing containers
 

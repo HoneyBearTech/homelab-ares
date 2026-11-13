@@ -24,15 +24,18 @@ for Let's Encrypt's HTTP challenge).
    The defaults work for a new installation; set `TZ`, and `CONFIG_ROOT` if you keep the data elsewhere (never
    inside `/var/lib/docker/volumes`: [installing.md](installing.md#where-data-lives)). Every setting is described in
    [interfaces.md](interfaces.md#settings). For restart notices from autoheal, also
-   create `autoheal.env` from `autoheal.env.example` (mode `600`) with a webhook URL.
+   create `autoheal.env` from `autoheal.env.example` (mode `600`) with a webhook URL. Optional webhook and backup
+   secrets belong in the ignored `autoheal.env` and `backup.env` files, using their templates, rather than `.env`.
 
-3. **Create the data directories and the proxy's network** (the directories as your user, so Docker doesn't
-   create them owned by root):
+3. **Create the data directories and the proxy's network.** Source only a trusted local `.env` into the current
+   shell. Creating directories under `CONFIG_ROOT` requires write permission; `sudo` supports the default location
+   on a fresh host. New directories are owned by root; change ownership only for PeaNUT, which runs as uid 1000:
 
    ```sh
-   . ./.env && mkdir -p "$CONFIG_ROOT"/npm/{config,letsencrypt,logrotate} \
-     "$CONFIG_ROOT"/{uptime-kuma,peanut,portainer}/config
-   sudo chown 1000:1000 "$CONFIG_ROOT/peanut/config"   # PeaNUT runs as uid 1000 (skip if that's your user)
+   . ./.env && sudo mkdir -p "$CONFIG_ROOT/npm/config" "$CONFIG_ROOT/npm/letsencrypt" \
+     "$CONFIG_ROOT/npm/logrotate" "$CONFIG_ROOT/uptime-kuma/config" \
+     "$CONFIG_ROOT/peanut/config" "$CONFIG_ROOT/portainer/config"
+   sudo chown 1000:1000 "$CONFIG_ROOT/peanut/config"   # PeaNUT runs as uid 1000
    docker network create "$PROXY_NETWORK"
    ```
 
@@ -47,7 +50,7 @@ for Let's Encrypt's HTTP challenge).
 5. **Finish each service's setup in its web UI** (ports in [interfaces.md](interfaces.md#services-and-ports)),
    starting with its admin login: Nginx Proxy Manager (admin port 81) asks you to change its default login on
    first sign-in, Uptime Kuma, PeaNUT and Portainer ask you to create one (Portainer only for the first few minutes
-   after it starts). Point PeaNUT at your NUT server in its settings. If a monitoring system scrapes PeaNUT's
-   metrics, give it PeaNUT's login (HTTP Basic auth).
+   after it starts). Point PeaNUT at your externally supplied NUT server in its settings; this stack does not run
+   a NUT server. If a monitoring system scrapes PeaNUT's metrics, give it PeaNUT's login (HTTP Basic auth).
 
 To upgrade later, follow [upgrading.md](upgrading.md); it starts with a backup.

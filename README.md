@@ -37,8 +37,9 @@ Docker Compose stack for Ares, a homelab Debian 13 (arm64) server. Version-pinne
 - **Uptime Kuma**: uptime checks and status pages
 - **PeaNUT**: a dashboard and metrics endpoint for the UPS, through a NUT server
 - **Portainer**: a web UI for the Docker hosts in the homelab (server; the hosts run its agent)
-- **autoheal**: restarts any of them whose health check fails, through a socket proxy that only lets it list,
-  inspect, restart and stop containers
+- **autoheal**: restarts any of them whose health check fails through socket-proxy
+- **socket-proxy**: filters Docker API access for autoheal, allowing only listing, inspecting, restarting and
+  stopping containers
 
 Every service has a health check, and every image is pinned by tag **and** digest, for `linux/arm64`. Renovate
 proposes dependency updates in pull requests; the maintainer reviews and merges them after CI checks pass. The
@@ -47,18 +48,37 @@ maintainer's server follows `main`: a pull agent there applies each merge within
 registry tag by itself: what runs is always a commit in `main`. Metrics dashboards
 (Grafana, Prometheus) are a separate project and not part of this stack.
 
+The NUT server is supplied externally. Managed Docker hosts can optionally run Portainer agents, and scheduled
+backups can optionally copy to an external backup destination. These systems are operator-supplied dependencies,
+not additional services in `compose.yaml`.
+
+## Repository layout
+
+| Path | What |
+| --- | --- |
+| [`compose.yaml`](compose.yaml) | The six-service stack |
+| [`.env.example`](.env.example), [`autoheal.env.example`](autoheal.env.example), [`backup.env.example`](backup.env.example) | Required Compose settings and optional webhook and scheduled-backup settings |
+| [`scripts/`](scripts/) | Policy checks, backup, restore and smoke-test scripts |
+| [`tests/`](tests/) | Policy, backup stopping, deployment lock and settings tests, with fixtures |
+| [`deploy/systemd/`](deploy/systemd/) | Scheduled-backup service and timer |
+| [`docs/`](docs/) | Setup, service and port reference, and operations guides |
+
 ## Getting started
 
 ```sh
 git clone https://github.com/HoneyBearTech/homelab-ares.git && cd homelab-ares
 cp .env.example .env && chmod 600 .env              # then set TZ, and CONFIG_ROOT if you keep data elsewhere
-. ./.env && mkdir -p "$CONFIG_ROOT"/npm/{config,letsencrypt,logrotate} \
-  "$CONFIG_ROOT"/{uptime-kuma,peanut,portainer}/config
+. ./.env && sudo mkdir -p "$CONFIG_ROOT/npm/config" "$CONFIG_ROOT/npm/letsencrypt" \
+  "$CONFIG_ROOT/npm/logrotate" "$CONFIG_ROOT/uptime-kuma/config" \
+  "$CONFIG_ROOT/peanut/config" "$CONFIG_ROOT/portainer/config"
 sudo chown 1000:1000 "$CONFIG_ROOT/peanut/config"  # PeaNUT runs as uid 1000
 docker network create "$PROXY_NETWORK"
 docker compose up -d --wait
 ```
 
+Source only a trusted local `.env`; it is loaded into the current shell before its variables are used.
+Creating the directories requires permission to write under `CONFIG_ROOT`; `sudo` supports a fresh host's default
+location. New directories are created as root, with ownership changed only for PeaNUT, which runs as uid 1000.
 The full steps are in the [quick start](docs/quick-start.md).
 
 ## Usage
@@ -77,11 +97,11 @@ Upgrading to a new release, or following `main` the way the maintainer's server 
 
 Settings come from `.env` (template [`.env.example`](.env.example)), which holds no secrets.
 
-| Setting | Default in `.env.example` | Meaning |
-| --- | --- | --- |
-| `TZ` | `Etc/UTC` | Time zone |
-| `CONFIG_ROOT` | `/srv/config` | Every service's data, in `CONFIG_ROOT/<service>/config` and folders beside it |
-| `PROXY_NETWORK` | `homelab-ares_proxy` | The proxy's Docker network, created once outside the stack |
+| Setting | Meaning |
+| --- | --- |
+| `TZ` | Time zone |
+| `CONFIG_ROOT` | Every service's data, in `CONFIG_ROOT/<service>/config` and folders beside it |
+| `PROXY_NETWORK` | The proxy's Docker network, created once outside the stack |
 
 `CONFIG_ROOT` holds certificates and logins: back it up (`scripts/backup.sh`), and never point it into
 `/var/lib/docker/volumes`, where `docker volume prune` deletes it

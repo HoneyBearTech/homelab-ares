@@ -14,8 +14,8 @@ images, pinned by digest.
 | Uptime Kuma | `louislam/uptime-kuma` | Uptime checks of hosts and services, with notifications and status pages |
 | PeaNUT | `brandawg93/peanut` | Dashboard for the UPS, read from a NUT server on the network; also exposes the UPS readings as Prometheus metrics |
 | Portainer (server) | `portainer/portainer-ce` (Community Edition, Alpine variant) | Web UI for the Docker hosts in the homelab: Ares itself through the Docker socket, the others through the Portainer agent running on each of them |
-| autoheal | `willfarrell/autoheal` | Restarts any service whose health check fails, and can post a notice to a webhook (Docker on its own only restarts a container that exits) |
-| socket-proxy | linuxserver.io | Gives autoheal a filtered view of the Docker API (list, inspect, restart and stop containers only) on an internal network |
+| autoheal | `journeyover/docker-autoheal` | Restarts any service whose health check fails, and can post a notice to a webhook (Docker on its own only restarts a container that exits) |
+| socket-proxy | `lscr.io/linuxserver/socket-proxy` | Gives autoheal a filtered view of the Docker API (list, inspect, restart and stop containers only) on an internal network |
 
 Every service has a health check, so `docker compose ps` shows a broken one, and autoheal restarts it.
 
@@ -77,7 +77,10 @@ only pulls; nothing connects in to it to deploy.
 | `scripts/backup.sh`, `scripts/restore.sh` | Backup and restore of every service's data |
 | `scripts/scheduled-backup.sh`, `deploy/systemd/homelab-ares-backup.service`, `deploy/systemd/homelab-ares-backup.timer` | Nightly backup, copied off the host with rsync and pruned, reported to an Uptime Kuma push monitor |
 | `scripts/smoke-test.sh` | Starts the stack in isolation, waits for health, and round-trips a backup |
-| `tests/` | The checker's tests, with JSON fixtures |
+| `scripts/lib.sh` | Shared backup/restore helpers and deployment locks |
+| `Makefile` | Test, lint, policy, resolved configuration and smoke-test targets |
+| `requirements-dev.in`, `requirements-dev.txt` | Development tool requirements and their pinned, hashed dependencies |
+| `tests/` | Policy checker, backup stopping, deployment lock and settings tests, with JSON fixtures |
 | `docs/` | This documentation |
 | `.github/` | CI, release and security workflows, templates |
 | `.gitlab-ci.yml` | The pipeline of the copy on the maintainer's GitLab: mirrors GitHub, re-runs the daemon-free checks |

@@ -10,11 +10,11 @@ and APIs are documented by their projects.
 Read by `docker compose` from `.env` next to `compose.yaml` (template: [`.env.example`](../.env.example)). Every
 setting is required: `docker compose` stops with an error naming any that's missing.
 
-| Setting | Example | Meaning |
-| --- | --- | --- |
-| `TZ` | `Etc/UTC` | Time zone (tz database name) for logs and schedules. |
-| `CONFIG_ROOT` | `/srv/config` | Host directory holding every service's data, one folder per service (`CONFIG_ROOT/<service>/config` and beside it any other folder of the service's own; see [Volumes and mounts](#volumes-and-mounts)). Never a path inside `/var/lib/docker/volumes` ([installing.md](installing.md#where-data-lives)). |
-| `PROXY_NETWORK` | `homelab-ares_proxy` | Docker network Nginx Proxy Manager joins. Created once outside the stack (`docker network create`), so its address range survives rebuilding the stack. |
+| Setting | Meaning |
+| --- | --- |
+| `TZ` | Time zone (tz database name) for logs and schedules. |
+| `CONFIG_ROOT` | Host directory holding every service's data, one folder per service (`CONFIG_ROOT/<service>/config` and beside it any other folder of the service's own; see [Volumes and mounts](#volumes-and-mounts)). Never a path inside `/var/lib/docker/volumes` ([installing.md](installing.md#where-data-lives)). |
+| `PROXY_NETWORK` | Docker network Nginx Proxy Manager joins. Created once outside the stack (`docker network create`), so its address range survives rebuilding the stack. |
 
 No secret is a setting. To adopt an existing installation, copy each service's data into its folder under
 `CONFIG_ROOT` and point `PROXY_NETWORK` at the network the old proxy uses
@@ -32,7 +32,9 @@ Read by the `autoheal` service (template: [`autoheal.env.example`](../autoheal.e
 ### `backup.env`
 
 Read by `scripts/scheduled-backup.sh` (template: [`backup.env.example`](../backup.env.example)); optional, mode
-`600`, gitignored. Read as data, never run: only these keys, one `KEY=value` per line; anything else is an error.
+`600`, gitignored. The optional `BACKUP_ENV_FILE` environment variable selects a different settings file; it is
+not an allowed key inside `backup.env`. The file is read as data, never run: only these keys, one `KEY=value` per
+line; anything else is an error.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -65,7 +67,7 @@ with the pull agent; nothing needs setting on a normal host.
 | `uptime-kuma` | `louislam/uptime-kuma` (slim) | 3001 → 3001 | Web UI and status pages; no "Real Browser" monitors (the slim image has no Chromium) |
 | `peanut` | `brandawg93/peanut` | 8080 → 8080 | Web UI, API and Prometheus metrics (`/api/v1/metrics`), behind PeaNUT's login (HTTP Basic auth works for scrapers); `/api/ping` is open |
 | `portainer` | `portainer/portainer-ce` (Alpine variant) | 9443 → 9443 | Web UI (HTTPS). Agents connect the standard way; 8000, the tunnel for Edge agents, isn't published |
-| `autoheal` | `willfarrell/autoheal` | none | Restarts any labelled service whose health check fails |
+| `autoheal` | `journeyover/docker-autoheal` | none | Restarts any labelled service whose health check fails |
 | `socket-proxy` | `lscr.io/linuxserver/socket-proxy` | none (internal network `docker-proxy`) | Filtered Docker API for autoheal |
 
 Ports are published on every host interface. Every service has a health check (`docker compose ps` shows it).
@@ -97,7 +99,7 @@ Every service's data is in a host directory under `CONFIG_ROOT`; the stack decla
 
 | Label | Meaning |
 | --- | --- |
-| `org.honeybeartech.ares.allow.<rule>` | Lets one service break one policy rule; the value is the reason, and must not be empty. Rules: `image`, `digest`, `latest`, `build`, `privileged`, `no-new-privileges`, `cap-drop`, `cap-add`, `host-network`, `host-pid`, `docker-socket`, `devices`, `healthcheck` ([security.md](security.md#policy)). In use: `portainer` and `socket-proxy` (`docker-socket`), `autoheal` (`latest`). |
+| `org.honeybeartech.ares.allow.<rule>` | Lets one service break one policy rule; the value is the reason, and must not be empty. Rules: `image`, `digest`, `latest`, `build`, `privileged`, `no-new-privileges`, `cap-drop`, `cap-add`, `host-network`, `host-pid`, `docker-socket`, `devices`, `healthcheck` ([security.md](security.md#policy)). In use: `portainer` and `socket-proxy` (`docker-socket`). |
 | `autoheal` | `"true"` on every service autoheal may restart when its health check fails: npm, uptime-kuma, peanut, portainer and socket-proxy. |
 | `org.honeybeartech.ares.backup.skip` | Container paths (comma-separated, exact) that `scripts/backup.sh` never archives and `scripts/restore.sh` refuses to write, even if a backup lists them: data too large to back up here or disposable. Not in use. |
 | `org.honeybeartech.ares.backup.exclude` | Paths inside a service's data mounts (comma-separated, exact container paths, at any depth) that `scripts/backup.sh` leaves out of the mount's archive and `scripts/restore.sh` leaves in place. A path that isn't inside one of the service's data mounts, or contains `..` or a pattern character (`*?[\`), makes both fail before anything stops. In use: npm (`/data/logs`). |
@@ -107,6 +109,7 @@ Every service's data is in a host directory under `CONFIG_ROOT`; the stack decla
 | Command | Does |
 | --- | --- |
 | `docker compose up -d` / `down` / `ps` / `logs <service>` | Runs and inspects the stack |
+| `make config` | Prints the resolved Compose file with `.env` applied |
 | `make check` | `docker compose config --format json \| python scripts/check_compose.py`: the policy check |
 | `python scripts/check_compose.py [FILE] [--sbom OUT]` | Checks a resolved Compose config (from `FILE` or stdin); `--sbom` also writes a CycloneDX 1.6 SBOM of the images. Exit 0 = no violations, 1 = violations (one line each), 2 = unreadable input |
 | `make test`, `make lint` | The checker's tests and the linters |

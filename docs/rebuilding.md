@@ -87,11 +87,14 @@ A server that follows `main` ([upgrading.md](upgrading.md#following-main)) stays
 
 Copy any other file from the backup's `env/` (such as `autoheal.env` and `backup.env`) the same way (mode `600`).
 Edit `CONFIG_ROOT` in `.env` if the new host keeps the data elsewhere (never inside `/var/lib/docker/volumes`:
-[installing.md](installing.md#where-data-lives)). Create the service folders as your user:
+[installing.md](installing.md#where-data-lives)). Source only the trusted local `.env` into the current shell.
+Create the service folders with `sudo` for permission to write under `CONFIG_ROOT`; new directories are owned by
+root, with ownership changed only for PeaNUT:
 
 ```sh
-. ./.env && mkdir -p "$CONFIG_ROOT"/npm/{config,letsencrypt,logrotate} \
-  "$CONFIG_ROOT"/{uptime-kuma,peanut,portainer}/config
+. ./.env && sudo mkdir -p "$CONFIG_ROOT/npm/config" "$CONFIG_ROOT/npm/letsencrypt" \
+  "$CONFIG_ROOT/npm/logrotate" "$CONFIG_ROOT/uptime-kuma/config" \
+  "$CONFIG_ROOT/peanut/config" "$CONFIG_ROOT/portainer/config"
 sudo chown 1000:1000 "$CONFIG_ROOT/peanut/config"   # PeaNUT runs as uid 1000
 ```
 
