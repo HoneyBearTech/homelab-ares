@@ -1,8 +1,9 @@
 # Quick start
 
 You need a Linux host on arm64 or amd64 (the reference is Debian 13 on arm64) with Docker Engine 25 or later and
-the Compose v2 plugin (2.24 or later), and a user in the `docker` group. Ports 80 and 443 must be free for the
-proxy.
+the Compose v2 plugin (2.24 or later), and a user in the `docker` group. Ports 80, 443, 81, 3001, 8080 and 9443
+must be free; ports 80 and 443 must also be reachable from the proxy's clients (and from the internet on port 80
+for Let's Encrypt's HTTP challenge).
 
 1. **Get the stack.**
 

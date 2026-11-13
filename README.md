@@ -53,6 +53,7 @@ git clone https://github.com/HoneyBearTech/homelab-ares.git && cd homelab-ares
 cp .env.example .env && chmod 600 .env              # then set TZ, and CONFIG_ROOT if you keep data elsewhere
 . ./.env && mkdir -p "$CONFIG_ROOT"/npm/{config,letsencrypt,logrotate} \
   "$CONFIG_ROOT"/{uptime-kuma,peanut,portainer}/config
+sudo chown 1000:1000 "$CONFIG_ROOT/peanut/config"  # PeaNUT runs as uid 1000
 docker network create "$PROXY_NETWORK"
 docker compose up -d --wait
 ```
@@ -83,8 +84,9 @@ Settings come from `.env` (template [`.env.example`](.env.example)), which holds
 
 `CONFIG_ROOT` holds certificates and logins: back it up (`scripts/backup.sh`), and never point it into
 `/var/lib/docker/volumes`, where `docker volume prune` deletes it
-([installing](docs/installing.md#where-data-lives)). autoheal's optional webhook URL (restart notices, for example to
-Discord) goes in `autoheal.env` (template [`autoheal.env.example`](autoheal.env.example), mode `600`, gitignored).
+([installing](docs/installing.md#where-data-lives)). Optional settings for autoheal's webhook go in `autoheal.env`
+(template [`autoheal.env.example`](autoheal.env.example)); scheduled backup settings go in `backup.env`
+([`backup.env.example`](backup.env.example)). Both files are gitignored; restrict them to mode `600`.
 
 Ports, volumes and labels: [docs/interfaces.md](docs/interfaces.md).
 
