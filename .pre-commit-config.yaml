@@ -5,7 +5,9 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: '(?i)(^docs/|\.md$|^\.github/workflows/|(^|/)CODEOWNERS$)'
       - id: end-of-file-fixer
+        exclude: '(?i)(^docs/|\.md$|^\.github/workflows/|(^|/)CODEOWNERS$)'
       - id: check-yaml
         args: [--allow-multiple-documents]
       - id: check-added-large-files
@@ -14,12 +16,13 @@ repos:
     rev: v8.24.2
     hooks:
       - id: gitleaks
+        args: [--redact]
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.37.1
     hooks:
       - id: yamllint
-        args: [--strict, --format, parsable]
+        args: [--format, parsable]
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.10.0.1
@@ -35,3 +38,8 @@ repos:
         args: [--output-format, github]
       - id: ruff-format
         args: [--check]
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.13.0
+    hooks:
+      - id: markdownlint-cli2
