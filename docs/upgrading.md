@@ -58,8 +58,8 @@ few proxied services still answer through the proxy.
 
 ### Portainer and its agents
 
-Portainer's server (here) and the agents on the Docker hosts it manages are updated together, by hand: Dependabot's
-Portainer pull requests are never merged automatically. Upgrade the server first (on a server that follows `main`,
+Portainer's server (here) and the agents on the Docker hosts it manages are updated together, by hand. Upgrade the
+server first (on a server that follows `main`,
 merging the pull request does that), then recreate each agent with the same version, pinned by tag and digest, keeping
 its usual options:
 
@@ -80,8 +80,8 @@ The maintainer's server doesn't check out releases: it runs `main`, and a small 
 maintainer's private orchestration repository, not here) deploys every merge. A systemd user timer starts it about
 every 90 seconds; when `main` has moved, it fast-forwards the checkout, runs `docker compose config --quiet`,
 `docker compose pull` and `docker compose up -d --remove-orphans --wait`, and logs the old and the new commit. So
-**a merge to `main` reaches the server within about two minutes**, including the updates Dependabot merges by
-itself ([dependencies.md](dependencies.md#tracking-dependencies)).
+**a merge to `main` reaches the server within about two minutes**
+([dependencies.md](dependencies.md#tracking-dependencies)).
 
 - The agent only fast-forwards: it refuses a checkout with local changes or a `main` whose history was rewritten.
   If the configuration doesn't resolve or an image can't be pulled, it moves the checkout back, so the server keeps
@@ -90,10 +90,10 @@ itself ([dependencies.md](dependencies.md#tracking-dependencies)).
   they run, and wait for a deploy in progress to finish before they stop anything, so the nightly backup never
   races a merge; the agent deploys on its first run after they finish
   ([Deploy lock](installing.md#deploy-lock)).
-- **The merge is the upgrade.** Major versions merge by themselves too, so an update that migrates a service's
-  data one way can arrive unattended; read its release notes when it lands, and restore from the nightly
-  [scheduled backup](installing.md#scheduled-backups) if it breaks. Before merging an update by hand (every
-  Portainer update), read the release notes and take a backup on the server (`scripts/backup.sh`).
+- **The merge is the upgrade.** The maintainer reviews every update and takes a backup before merging; an update
+  that migrates a service's data one way can require restoring from the nightly
+  [scheduled backup](installing.md#scheduled-backups) if it breaks. Read the release notes and take a backup on
+  the server (`scripts/backup.sh`) before merging.
 - **Rolling back** is a revert pull request, deployed the same way. If the service already migrated its data,
   restore that too ([Rolling back](#rolling-back)).
 - **Holding the server on a version**: check out that commit or release on the server (`git checkout vX.Y.Z`).

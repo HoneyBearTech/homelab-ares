@@ -34,46 +34,36 @@ Each release carries a CycloneDX SBOM listing every service's image and digest
 
 ## Tracking dependencies
 
-- **Dependabot** ([`.github/dependabot.yml`](../.github/dependabot.yml)) checks weekly for new image
-  versions in the Compose file, new tool versions and new Action versions, and opens a pull request for
-  each. Dependabot alerts and security updates are on.
-- **Patch, minor and major updates merge automatically**
-  ([`.github/workflows/dependabot-auto-merge.yml`](../.github/workflows/dependabot-auto-merge.yml)): for the
-  images, the Python tools and the GitHub Actions, they're squash-merged once every required check has passed
-  (CI with the Compose policy check and the smoke test, CodeQL, dependency review). Nothing skips a check, and
-  a failing update stays open for the maintainer.
-- **Image rebuilds merge automatically too**: a pull request that only moves an image to a new digest under the
-  same tag (a rebuild of the same app version, with newer base packages) and changes nothing else in `compose.yaml`.
-  Portainer's rebuilds wait, like its version updates.
-- **Major updates merge automatically too** (the maintainer's decision, 2026-10-14), so they reach the
-  maintainer's server unattended. A new major version can migrate a service's data one way: the nightly backup
-  is the way back, since a revert alone doesn't undo the migration.
-- **Merge token**: the workflow enables auto-merge with the Dependabot secret `AUTO_MERGE_TOKEN` (a fine-grained
-  token or GitHub App token with contents, pull requests and workflows write) when it is set, else with
-  `GITHUB_TOKEN`. The default token can't merge a pull request that changes a workflow file, and a merge made with
-  it starts no push workflows, so CodeQL, Scorecard and the image scan wouldn't run on `main` afterwards.
-- **Merged by hand**: any update Dependabot can't classify as patch, minor or major, and every Portainer update
-  (its server and the agents on the other hosts move together).
-- **A merge deploys.** The maintainer's server follows `main` with a pull agent, so every merge, the automatic
-  ones included, reaches it within about two minutes ([upgrading.md](upgrading.md#following-main)). So every
-  automatic merge relies on the nightly [scheduled backup](installing.md#scheduled-backups), and the
-  maintainer takes a backup before merging the updates that wait.
+- **Renovate** ([`renovate.json`](../renovate.json)) runs before 06:00 each Monday in `America/Chicago` and
+  proposes updates for the root Compose file, pip requirements, and GitHub Actions, covering all three entries
+  formerly configured in Dependabot. Minor and patch updates are grouped; major updates use a separate group
+  with a `major` label. The dependency dashboard tracks pending work. CI and required review apply to every PR.
+- **No automatic merging**: `automerge` is explicitly false. The maintainer reviews and merges every update,
+  including image rebuilds, Portainer changes, and majors. A new major can migrate service data one way, so the
+  maintainer takes a backup before merging; a revert alone doesn't undo that migration.
+- Renovate's `vulnerabilityAlerts` option is its vulnerability-alert PR path. Renovate's experimental
+  `osvVulnerabilityAlerts` feature covers direct dependencies only for the `crate`, `go`, `hackage`, and `hex`
+  data sources; it does **not** provide OSV coverage for this repository's Compose, pip, or GitHub Actions
+  managers. Existing GitHub Dependabot alerts and security settings are separate, unchanged repository settings.
+- **A merge deploys.** The maintainer's server follows `main` with a pull agent, so every merge reaches it within
+  about two minutes ([upgrading.md](upgrading.md#following-main)). The maintainer takes a backup before merging.
 - **Dependency review** ([`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml))
   blocks a pull request that adds or changes a Python or Actions dependency with a known vulnerability of
   moderate severity or higher, or a license outside the allowlist.
-- The CI-only images in `run:` steps, the images in `.gitlab-ci.yml` and the scripts' busybox image aren't seen
-  by Dependabot; they're bumped by hand at least every quarter.
+- The CI-only images in `run:` steps, the images in `.gitlab-ci.yml` and the scripts' busybox image aren't in
+  Renovate's configured managers; they're bumped by hand at least every quarter.
 - **Nothing on the host updates from a registry.** Auto-updaters such as Watchtower are not used: they would run
   versions nobody reviewed. The pull agent only applies commits merged into `main`.
 
 ## Policy for vulnerabilities in dependencies
 
-Known vulnerabilities are found through Dependabot alerts, the services' and images' own advisories, and a
+Known vulnerabilities are found through GitHub Dependabot alerts, Renovate vulnerability-alert PRs, the services'
+and images' own advisories, and a
 weekly scan of the pinned digests ([`scan.yml`](../.github/workflows/scan.yml): Trivy, HIGH and CRITICAL
 findings that have a fix, for `linux/arm64`, reported to code scanning with one category per image). Each
 finding is triaged within 14 days:
 
-1. **If a fixed version exists**, bump to it (a Dependabot pull request usually already does; the merge deploys
+1. **If a fixed version exists**, bump to it (a Renovate pull request usually already does; the merge deploys
    it to the maintainer's server) and release it for those who run releases. A fix for an exploitable critical or
    high-severity vulnerability goes out in a patch release within 30 days; others go out with the next release.
 2. **If upstream hasn't released a fix**, assess whether it's reachable in this stack (which ports are
@@ -99,7 +89,7 @@ new since 22 October, 29 of them in those kernel headers.
 | Image | Open (critical) | Fixed by a bump? | Action |
 | --- | --- | --- | --- |
 | Nginx Proxy Manager `2.16.0` | 104 (5) | No: the newest release (24 September), not rebuilt since | Wait for upstream; keep the admin port on the LAN (below) |
-| Uptime Kuma `2.5.7-slim` | 60 (2) | Partly: 2.5.9 (31 October) fixes 5 (`undici`, `follow-redirects`) and two advisories of its own (below) | Dependabot hasn't proposed it yet; its next weekly run should, and it merges automatically |
+| Uptime Kuma `2.5.7-slim` (scan snapshot) | 60 (2) | Partly: 2.5.9 (31 October) fixes 5 (`undici`, `follow-redirects`) and two advisories of its own (below) | This migration updates to 2.5.9; rescan after merge to verify the remaining findings |
 | Portainer `2.45.3-alpine` | 5 (0) | No: the newest long-term-support release | Wait for upstream |
 | PeaNUT `6.1.1` | 3 (2) | No: 6.1.2 (28 October) still ships Next.js 16.3.8 | Wait for upstream |
 | autoheal, socket-proxy | 0 | | |
@@ -147,9 +137,8 @@ The full image isn't a way out while it bundles Chromium ([below](#first-triage-
 re-checked monthly; if the slim base falls months behind Debian's updates again by the January 2027 quarterly review,
 the maintainer decides there between asking upstream for a rebuild and step 3.
 
-**autoheal** (`willfarrell/autoheal`): its only maintained tag is `latest` (its versioned tags stop at 1.2.0 from
-2021), so it is pinned as `latest@sha256:…` with a policy exception; if Dependabot doesn't propose new digests for
-it, it's bumped by hand with the other hand-pinned images.
+**autoheal** (`journeyover/docker-autoheal`): pinned to the maintained 2.0.2 version and verified multi-platform
+index digest in `compose.yaml`; its process command supports the existing `pgrep -f autoheal` health check.
 
 ### First triage (7 October 2026)
 
