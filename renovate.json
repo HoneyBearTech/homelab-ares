@@ -7,8 +7,13 @@
   "enabledManagers": [
     "docker-compose",
     "pip_requirements",
-    "github-actions"
+    "github-actions",
+    "gitlabci",
+    "pre-commit"
   ],
+  "pre-commit": {
+    "enabled": true
+  },
   "schedule": ["before 6am on monday"],
   "timezone": "America/Chicago",
   "labels": ["dependencies"],
@@ -25,7 +30,7 @@
     },
     {
       "matchUpdateTypes": ["major"],
-      "groupName": "major dependencies",
+      "groupName": null,
       "addLabels": ["major"]
     }
   ]
