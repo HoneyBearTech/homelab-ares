@@ -160,6 +160,8 @@ services:
     container_name: autoheal
     restart: unless-stopped
     read_only: true
+    tmpfs:
+      - /tmp
     # autoheal exits if it can't reach the proxy, so it starts only once the proxy answers. (After a host reboot
     # Docker starts both at once; autoheal then restarts until the proxy is up, a few seconds.)
     depends_on:
