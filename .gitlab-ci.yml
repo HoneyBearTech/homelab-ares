@@ -31,7 +31,7 @@ stages: [mirror, config, checks]
 mirror:
   stage: mirror
   image:
-    name: alpine/git:v2.54.0@sha256:a4bb51f1a3553df194ce679fc1db721d8bfba2046fa1a88fe9d4ac551ffbce25
+    name: alpine/git:v2.54.0@sha256:6a1fdb962814ca11508ca8d1bab94375b5b7ac4e4a9a40981c29fc32c02f095d
     entrypoint: [""]
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $MIRROR_TOKEN
@@ -50,7 +50,7 @@ mirror:
 compose-config:
   extends: .checks
   stage: config
-  image: docker:29.8.2-cli@sha256:35cfcf893c20f2931f4909151b5407aaaeab711277de7ce8b8f521f095d54c32
+  image: docker:29.9.3-cli@sha256:5a7af0dcb0e46c803efe9b45371dd21cb500e5b4453250394ac6f06d49b6e6f1
   script:
     - cp .env.example .env
     - docker compose config --quiet
@@ -63,7 +63,7 @@ checks:
   extends: .checks
   stage: checks
   needs: [compose-config]
-  image: python:3.14.8-slim-trixie@sha256:f85c5697265c178cc6887276c55fe16cf3d14ca35c3df6a5eab3b360534a55d2
+  image: python:3.15.2-slim-trixie@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
   variables:
     PIP_DISABLE_PIP_VERSION_CHECK: "1"
   script:
