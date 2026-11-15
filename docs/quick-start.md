@@ -27,6 +27,9 @@ for Let's Encrypt's HTTP challenge).
    create `autoheal.env` from `autoheal.env.example` (mode `600`) with a webhook URL. Optional webhook and backup
    secrets belong in the ignored `autoheal.env` and `backup.env` files, using their templates, rather than `.env`.
 
+   A smaller installation can enable [optional service profiles](interfaces.md#optional-services) in `.env`
+   before continuing; create directories and reserve ports only for the selected services.
+
 3. **Create the data directories and the proxy's network.** Source only a trusted local `.env` into the current
    shell. Creating directories under `CONFIG_ROOT` requires write permission; `sudo` supports the default location
    on a fresh host. New directories are owned by root; change ownership only for PeaNUT, which runs as uid 1000:

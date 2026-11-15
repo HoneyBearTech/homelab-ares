@@ -48,6 +48,9 @@ maintainer's server follows `main`: a pull agent there applies each merge within
 registry tag by itself: what runs is always a commit in `main`. Metrics dashboards
 (Grafana, Prometheus) are a separate project and not part of this stack.
 
+For a smaller installation, opt into [Compose profiles](docs/interfaces.md#optional-services) to choose
+Uptime Kuma, PeaNUT, Portainer and autoheal independently. Existing installations keep the full stack by default.
+
 The NUT server is supplied externally. Managed Docker hosts can optionally run Portainer agents, and scheduled
 backups can optionally copy to an external backup destination. These systems are operator-supplied dependencies,
 not additional services in `compose.yaml`.

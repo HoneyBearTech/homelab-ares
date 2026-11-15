@@ -40,6 +40,10 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Added
 
+- Opt-in `compose.profiles.yaml` for smaller installations: select Uptime Kuma, PeaNUT, Portainer and autoheal
+  (with socket-proxy) through `COMPOSE_PROFILES` in `.env`. The existing full-stack deployment stays the default;
+  backups and restores follow the selection. See [optional services](docs/interfaces.md#optional-services).
+
 - An encrypted copy off the host for the scheduled backup: with `BACKUP_AGE_RECIPIENT` (an age public key) in
   `backup.env`, only `backup.tar.age` and its `SHA256SUMS` leave the host, and only the private key's holder can
   read them (`age -d -i <key> backup.tar.age | tar -x`). Needs `age` on the host; optional, and without it the

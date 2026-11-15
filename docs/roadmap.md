@@ -27,7 +27,8 @@ file changes with them, in the same pull request.
 ## Later
 
 - Non-root users for the services whose images allow it.
-- Optional services as Compose profiles, so a smaller installation can leave them out.
+- Done: optional services as opt-in Compose profiles, so a smaller installation can leave them out without
+  changing existing full-stack deployments ([interfaces.md](interfaces.md#optional-services)).
 
 ## Security and project health
 

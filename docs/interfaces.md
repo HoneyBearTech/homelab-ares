@@ -20,6 +20,40 @@ No secret is a setting. To adopt an existing installation, copy each service's d
 `CONFIG_ROOT` and point `PROXY_NETWORK` at the network the old proxy uses
 ([installing.md](installing.md#adopting-existing-containers)).
 
+### Optional services
+
+[`compose.yaml`](../compose.yaml) runs the full six-service stack by default, including for existing `.env`
+files. To use a smaller installation, add these optional Compose settings to `.env`:
+
+```sh
+COMPOSE_FILE=compose.yaml:compose.profiles.yaml
+COMPOSE_PROFILES=uptime-kuma,peanut,portainer,autoheal
+```
+
+The override [`compose.profiles.yaml`](../compose.profiles.yaml) puts optional services behind
+[Compose profiles](https://docs.docker.com/compose/how-tos/profiles/). Remove names from `COMPOSE_PROFILES` to
+leave services out; an empty value runs only Nginx Proxy Manager. `autoheal` includes both autoheal and
+socket-proxy, so their dependency is always satisfied. Without that profile Docker still restarts crashed
+services, but unhealthy containers are not automatically restarted.
+
+| Setting | Meaning |
+| --- | --- |
+| `COMPOSE_FILE` | Optional: `compose.yaml:compose.profiles.yaml` enables service selection. Omit to run the full stack. |
+| `COMPOSE_PROFILES` | Comma-separated optional profiles: `uptime-kuma`, `peanut`, `portainer`, `autoheal`. Read only when the profile override is selected; empty runs just npm. `*` enables all profiles. |
+
+Store the selection in `.env`, rather than only passing `--profile` to one command: the pull agent and
+scheduled backups must see the same services. `docker compose config --services` shows the selected services;
+only those need data directories and free ports. Backup and restore commands use that same selection, and the
+backup copies `.env` so a rebuild can recover it. To restore an archive for a disabled service, first enable its
+profile in `.env`; a full-stack backup requires all its services enabled when restoring the whole backup.
+Explicitly targeting a service on a Compose command can enable it even if its profile is disabled.
+
+When reducing an existing installation, back up first, stop the services being removed **before** changing
+`.env` (`docker compose stop peanut`, for example), then update the selection and run
+`docker compose up -d --remove-orphans --wait`. This removes the omitted containers, retaining their bind-mounted
+data under `CONFIG_ROOT`. When enabling a service later, prepare its data directory as in the quick start before
+running `docker compose up -d --wait`. Keep the proxy's external network in either mode.
+
 ### `autoheal.env`
 
 Read by the `autoheal` service (template: [`autoheal.env.example`](../autoheal.env.example)); optional, mode
