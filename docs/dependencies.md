@@ -30,13 +30,16 @@ A new image or tool must:
 
 Each release carries a CycloneDX SBOM listing every service's image and digest
 ([verifying-releases.md](verifying-releases.md)). To update the pinned Python tools, edit
-`requirements-dev.in` if needed and run `pip-compile --generate-hashes --strip-extras requirements-dev.in`.
+the exact direct versions in `requirements-dev.in` and run
+`pip-compile --generate-hashes --strip-extras --no-emit-index-url --output-file=requirements-dev.txt requirements-dev.in`.
+Keep pip-compile's generated header: Renovate uses its command to link the source and hash-locked output.
 
 ## Tracking dependencies
 
 - **Renovate** ([`renovate.json`](../renovate.json)) runs before 06:00 each Monday in `America/Chicago` and
-  proposes updates for the root Compose file, pip requirements, GitHub Actions, GitLab CI images, and pre-commit
-  hooks, covering all three entries formerly configured in Dependabot. Minor and patch updates are grouped;
+  proposes updates for Compose images, Python tools through `pip-compile`, GitHub Actions, GitLab CI images,
+  pre-commit hooks, and the pinned helper and CI images in shell scripts and workflow commands. Docker tag updates
+  keep their digest pins. Minor and patch updates are grouped;
   major updates have individual PRs with a `major` label. The dependency dashboard tracks pending work. CI and
   required review apply to every PR.
 - **No automatic merging**: `automerge` is explicitly false. The maintainer reviews and merges every update,
@@ -51,8 +54,11 @@ Each release carries a CycloneDX SBOM listing every service's image and digest
 - **Dependency review** ([`.github/workflows/dependency-review.yml`](../.github/workflows/dependency-review.yml))
   blocks a pull request that adds or changes a Python or Actions dependency with a known vulnerability of
   moderate severity or higher, or a license outside the allowlist.
-- The CI-only images in workflow `run:` steps and the scripts' busybox image aren't in Renovate's configured
-  managers; they're bumped by hand at least every quarter.
+- The custom regex manager tracks busybox in `scripts/lib.sh` and actionlint, gitleaks and Trivy in workflow
+  `run:` steps, including their digests. The `pip-compile` manager updates direct pins in `requirements-dev.in`
+  together with the resolved dependencies and hashes in `requirements-dev.txt`; weekly lock-file maintenance
+  refreshes transitive dependencies. The native `pip_requirements` manager is omitted to avoid separate edits
+  to the generated output.
 - **Nothing on the host updates from a registry.** Auto-updaters such as Watchtower are not used: they would run
   versions nobody reviewed. The pull agent only applies commits merged into `main`.
 

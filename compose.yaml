@@ -40,7 +40,11 @@ services:
     <<: *defaults
     image: jc21/nginx-proxy-manager:2.17.0@sha256:91277490a919c792aa73b8d291af1ca84d32be74df988e543137976515763534
     container_name: nginxproxymanager
-    # Its init (s6-overlay) runs as root: it creates the npm user, takes ownership of /data and runs nginx and the
+    environment:
+      TZ: ${TZ:?set TZ in .env}
+      PUID: 1000
+      PGID: 1000
+    # Its init (s6-overlay) runs as root: it creates uid 1000, takes ownership of /data and runs nginx and the
     # admin backend as that user, so it needs these of Docker's default capabilities. Its root filesystem stays
     # writable: nginx, certbot and the init write all over it.
     cap_add:
@@ -83,10 +87,11 @@ services:
     # is SQLite), which carried almost all of the image's known vulnerabilities.
     image: louislam/uptime-kuma:2.5.11-slim@sha256:3c3a54a7338a41129163d933295076424e51b07f861a4cdf96a68b50bdde7a73
     container_name: uptime-kuma
-    # It runs as root but its data directory belongs to uid 1000 (DAC_OVERRIDE), and the image's ping carries the
-    # NET_RAW file capability, which Linux refuses to run without it (ping monitors).
+    # Upstream's rootless stage differs only by USER node. Use that same uid with this pinned image; its data
+    # directory must belong to 1000:1000 (see docs/upgrading.md before changing an existing installation).
+    user: "1000:1000"
+    # Keep NET_RAW in the bounding set so the image's ping, which carries that file capability, can execute.
     cap_add:
-      - DAC_OVERRIDE
       - NET_RAW
     read_only: true
     tmpfs:
@@ -158,6 +163,8 @@ services:
     image: journeyover/docker-autoheal:2.0.2@sha256:32ec865ea96434e07db1cc1a9cff9f56d5566941721658c9dcb4a0b12680ca8e
     <<: *hardened
     container_name: autoheal
+    # Only uses the proxy's TCP API and /tmp; never needs root or access to the host socket.
+    user: "65534:65534"
     restart: unless-stopped
     read_only: true
     tmpfs:

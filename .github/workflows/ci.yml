@@ -94,6 +94,17 @@ jobs:
           docker compose config --quiet
           docker compose config --format json | python scripts/check_compose.py
 
+      - name: Optional service profiles
+        run: |
+          export COMPOSE_FILE=compose.yaml:compose.profiles.yaml
+          # A minimal installation has only the proxy; enabling all profiles keeps all six services.
+          COMPOSE_PROFILES="" docker compose config --services | diff -u <(printf 'npm\n') -
+          COMPOSE_PROFILES='*' docker compose config --services | sort | diff -u <(
+            printf '%s\n' autoheal npm peanut portainer socket-proxy uptime-kuma
+          ) -
+          COMPOSE_PROFILES="" docker compose config --format json | python scripts/check_compose.py
+          COMPOSE_PROFILES='*' docker compose config --format json | python scripts/check_compose.py
+
   smoke:
     # A required check on main, like "Checks + tests", so an image that doesn't start can't be auto-merged.
     name: Stack smoke test

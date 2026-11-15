@@ -6,32 +6,80 @@
   ],
   "enabledManagers": [
     "docker-compose",
-    "pip_requirements",
+    "pip-compile",
     "github-actions",
     "gitlabci",
-    "pre-commit"
+    "pre-commit",
+    "custom.regex"
   ],
   "pre-commit": {
     "enabled": true
   },
-  "schedule": ["before 6am on monday"],
+  "schedule": [
+    "before 6am on monday"
+  ],
   "timezone": "America/Chicago",
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "vulnerabilityAlerts": {
     "enabled": true,
-    "labels": ["security"]
+    "labels": [
+      "security"
+    ]
   },
   "osvVulnerabilityAlerts": true,
   "automerge": false,
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "matchDatasources": [
+        "docker"
+      ],
+      "pinDigests": true
+    },
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
       "groupName": "minor and patch dependencies"
     },
     {
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "groupName": null,
-      "addLabels": ["major"]
+      "addLabels": [
+        "major"
+      ]
     }
-  ]
+  ],
+  "pip-compile": {
+    "managerFilePatterns": [
+      "/^requirements-dev\\.txt$/"
+    ]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Pinned helper and CI images outside native Docker managers",
+      "managerFilePatterns": [
+        "/^scripts/lib\\.sh$/",
+        "/^\\.github/workflows/[^/]+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "(?<depName>[a-z0-9][a-z0-9._/-]*):(?<currentValue>[a-zA-Z0-9][a-zA-Z0-9._-]*)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 6am on monday"
+    ]
+  }
 }

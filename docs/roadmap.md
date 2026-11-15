@@ -24,19 +24,26 @@ file changes with them, in the same pull request.
 - Done: scheduled backups copied off the host (`scripts/scheduled-backup.sh`, a systemd timer), reported to Uptime
   Kuma.
 
-## Later
+## Service hardening and optional installs
 
-- Non-root users for the services whose images allow it.
-- Optional services as Compose profiles, so a smaller installation can leave them out.
+- Done: Uptime Kuma and PeaNUT run as uid 1000, autoheal as uid 65534, and Nginx Proxy Manager's nginx and
+  backend as uid 1000 behind its root init. Docker socket consumers retain their required socket access
+  ([security.md](security.md#hardening)); existing Uptime Kuma data needs the documented ownership migration
+  ([upgrading.md](upgrading.md#non-root-services)).
+- Done: optional services as opt-in Compose profiles, so a smaller installation can leave them out without
+  changing existing full-stack deployments ([interfaces.md](interfaces.md#optional-services)).
 
 ## Security and project health
 
+Infrastructure verified on 14 November 2026. Keeping checks green, maintaining badges and signing future
+releases are continuing obligations, rather than features that can be completed once.
+
 - Keep CI, CodeQL, Scorecard, dependency review and the DCO check green on every change.
-- Branch protection on `main` with required checks; private vulnerability reporting; secret scanning with
+- Done: branch protection on `main` with required checks; private vulnerability reporting; secret scanning with
   push protection.
 - Keep the OpenSSF Best Practices **Passing** and **Silver** badges (both reached) and **OSPS Baseline** Levels 1
   and 2 (met).
-- Signed releases with checksums, SBOM and SLSA provenance (every release since 0.1.0).
+- Keep signing releases with checksums, SBOM and SLSA provenance (every release since 0.1.0).
 
 ## What homelab-ares will not do
 

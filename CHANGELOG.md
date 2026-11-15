@@ -8,6 +8,10 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Upgrading
 
+- Before deploying the non-root Uptime Kuma configuration, back up, stop Uptime Kuma and recursively change
+  `CONFIG_ROOT/uptime-kuma/config` to owner `1000:1000` ([instructions](docs/upgrading.md#non-root-services)).
+  On a host following `main`, prepare this ownership before merging; the previous root configuration also
+  works with it. Repeat after restoring data from an older root-owned backup.
 - **Move each service's data into its folder under `CONFIG_ROOT` before deploying this, then add `CONFIG_ROOT` to
   `.env`** (required; see `.env.example`). Stop the services first (`docker compose stop npm uptime-kuma peanut
   portainer`; every site behind the proxy is unreachable until the stack is up again) and leave them stopped until
@@ -40,6 +44,10 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Added
 
+- Opt-in `compose.profiles.yaml` for smaller installations: select Uptime Kuma, PeaNUT, Portainer and autoheal
+  (with socket-proxy) through `COMPOSE_PROFILES` in `.env`. The existing full-stack deployment stays the default;
+  backups and restores follow the selection. See [optional services](docs/interfaces.md#optional-services).
+
 - An encrypted copy off the host for the scheduled backup: with `BACKUP_AGE_RECIPIENT` (an age public key) in
   `backup.env`, only `backup.tar.age` and its `SHA256SUMS` leave the host, and only the private key's holder can
   read them (`age -d -i <key> backup.tar.age | tar -x`). Needs `age` on the host; optional, and without it the
@@ -48,6 +56,9 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Fixed
 
+- Renovate now tracks the pinned busybox helper and actionlint, gitleaks and Trivy images in workflow commands,
+  including digest updates. Python updates use `pip-compile` to regenerate a consistent hash-locked dependency
+  set from exact direct pins; weekly lock-file maintenance refreshes transitive dependencies.
 - The smoke test's restore into a removed config directory also runs for a stack built from this one where only one
   service keeps its data in `CONFIG_ROOT/<service>/config`; it used to fail with "no service keeps only its config
   directory". Ares has several such services and isn't affected.
@@ -72,6 +83,10 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Changed
 
+- Uptime Kuma runs as uid/gid 1000:1000 without `DAC_OVERRIDE`; autoheal runs as 65534:65534. Nginx Proxy
+  Manager uses upstream PUID/PGID support for nginx and its backend as 1000:1000, keeping its required root init.
+  PeaNUT remains non-root; Portainer and socket-proxy retain their host socket access. The smoke test checks
+  process identities and ping support with realistically owned data directories.
 - Dependabot auto-merge uses the Dependabot secret `AUTO_MERGE_TOKEN` when set (falling back to `GITHUB_TOKEN`), so
   updates that change workflow files can merge and a merge starts the push workflows. See `docs/dependencies.md`.
 - The smoke test runs a stack's own steps from `scripts/smoke-stack.sh` when that exists (`smoke_prepare` before the

@@ -133,19 +133,13 @@ done
 if [ "$config_dirs" -lt 2 ]; then follow_leader=""; fi
 if [ -n "$follow_leader" ]; then mkdir -p "$config_root/$follow_leader/config/smoke-follower"; fi
 
-# The directories are owned as on a host: by PUID:PGID with mode 0755 when the stack sets PUID (the LinuxServer.io
-# images' convention), so a service that needs more than that, such as DAC_OVERRIDE to write into a directory it
-# doesn't own, fails here rather than at a deploy. Without PUID they're writable by any user: some services run as
-# a fixed uid that isn't the caller's (PeaNUT as 1000). chown runs as root in a throwaway container.
-puid=$(sed -n 's/^PUID=//p' "$work/env")
-pgid=$(sed -n 's/^PGID=//p' "$work/env")
+# Match installation ownership: only Uptime Kuma and PeaNUT's data belongs to uid 1000; NPM's root init
+# prepares its own directories. Avoid world-writable mounts that would conceal a missing ownership migration.
 for dir in "${data_dirs[@]+"${data_dirs[@]}"}"; do
-  if [ -n "$puid" ]; then
-    docker run --rm --network none -v "$dir:/data" "$busybox" \
-      sh -c 'chown "$1:$2" /data && chmod 0755 /data' own "$puid" "${pgid:-$puid}" </dev/null
-  else
-    chmod 0777 "$dir"
-  fi
+  owner=0:0
+  case $dir in "$config_root/uptime-kuma/config"|"$config_root/peanut/config") owner=1000:1000 ;; esac
+  docker run --rm --network none -v "$dir:/data" "$busybox" \
+    sh -c 'chown "$1" /data && chmod 0755 /data' own "$owner" </dev/null
 done
 
 # Networks the stack expects to exist (external ones, named by *_NETWORK settings) are created for the test only.
@@ -220,6 +214,41 @@ fail() {
   exit 1
 }
 if declare -F smoke_check >/dev/null; then smoke_check; fi
+
+# Assert the process identities as well as service health: an image update must not silently restore root.
+for service in uptime-kuma peanut autoheal; do
+  if echo "$stack_services" | grep -qx "$service"; then
+    id=$(compose ps --quiet "$service")
+    # PeaNUT is distroless, so use its Node runtime instead of a shell.
+    if [ "$service" = peanut ]; then
+      uid=$(compose exec -T peanut node -p 'process.getuid()')
+    else
+      uid=$(docker exec "$id" id -u)
+    fi
+    case $service in autoheal) expected=65534 ;; *) expected=1000 ;; esac
+    [ "$uid" = "$expected" ] || fail "$service runs as uid $uid, expected $expected"
+  fi
+done
+if echo "$stack_services" | grep -qx npm; then
+  # Its init stays root; the long-lived nginx and Node processes must run as uid 1000.
+  # shellcheck disable=SC2016 # JavaScript template literals expand inside Node, not in the shell.
+  compose exec -T --user 1000:1000 npm node -e '
+    const fs = require("fs");
+    const found = new Set();
+    for (const pid of fs.readdirSync("/proc").filter(p => /^[0-9]+$/.test(p))) {
+      if (Number(pid) === process.pid) continue;
+      let status;
+      try { status = fs.readFileSync(`/proc/${pid}/status`, "utf8"); }
+      catch (error) { if (error.code === "ENOENT") continue; throw error; }
+      const comm = status.match(/^Name:\s+(\S+)/m)[1];
+      const name = comm.startsWith("node") ? "node" : comm;
+      if (!["nginx", "node"].includes(name)) continue;
+      if (!/^Uid:\s+1000\s+1000\s+1000\s+1000$/m.test(status)) process.exit(1);
+      found.add(name);
+    }
+    if (found.size !== 2) process.exit(1);
+  ' || fail "npm nginx or backend runs as root"
+fi
 
 # Uptime Kuma's ping monitors run the image's ping, which needs NET_RAW (compose.yaml adds it back).
 if echo "$stack_services" | grep -qx uptime-kuma; then

@@ -55,15 +55,25 @@ with these settings, and that Uptime Kuma can still ping.
 
 | Service | Capabilities added back | Read-only root filesystem | Why |
 | --- | --- | --- | --- |
-| npm | `CHOWN`, `DAC_OVERRIDE`, `FOWNER`, `SETUID`, `SETGID`, `KILL`, `NET_BIND_SERVICE` | no | Its init runs as root, creates its user, takes ownership of its data and runs nginx on ports 80 and 443 as that user; nginx, certbot and the init write all over the image |
-| uptime-kuma | `DAC_OVERRIDE`, `NET_RAW` | yes (`/tmp` in memory) | It runs as root, but its data directory belongs to uid 1000; the image's `ping` carries the `NET_RAW` file capability, which Linux refuses to run without |
+| npm | `CHOWN`, `DAC_OVERRIDE`, `FOWNER`, `SETUID`, `SETGID`, `KILL`, `NET_BIND_SERVICE` | no | Its init runs as root, creates uid/gid 1000:1000, takes ownership of its data and runs nginx on ports 80 and 443 and its backend as that user; nginx, certbot and the init write all over the image |
+| uptime-kuma | `NET_RAW` | yes (`/tmp` in memory) | Runs as uid/gid 1000:1000; the image's `ping` carries the `NET_RAW` file capability, which Linux refuses to run without |
 | peanut | none | yes (`/tmp` in memory) | Runs as uid 1000 and writes only its settings directory |
 | portainer | none | yes (`/tmp` in memory) | Writes only its data directory and temporary files; it reaches Docker through the socket, which belongs to root |
-| autoheal | none | yes | Only talks to socket-proxy |
+| autoheal | none | yes (`/tmp` in memory) | Runs as uid/gid 65534:65534; only talks to socket-proxy |
 | socket-proxy | none | yes (`/run`, `/tmp` in memory) | Only reads the socket |
 
-Nginx Proxy Manager, Uptime Kuma, Portainer, autoheal and socket-proxy still run as root inside their containers,
-since their images offer nothing else. Without capabilities that root can only reach what it owns.
+Nginx Proxy Manager's init remains root because upstream requires it, while its nginx and backend processes use
+[upstream's PUID/PGID support](https://nginxproxymanager.com/advanced-config/#running-processes-as-a-user-group)
+to run as uid/gid 1000:1000. Uptime Kuma uses the same user as its
+[upstream rootless image stage](https://github.com/louislam/uptime-kuma/blob/2.5.11/docker/dockerfile), with the
+existing pinned slim image. PeaNUT already runs as uid 1000; autoheal needs no local privileges because it uses TCP.
+The smoke test checks these identities and Uptime Kuma's ping support.
+
+Portainer and socket-proxy remain root to access the host Docker socket across supported Docker installations:
+its group ID is host-specific. Giving a different uid access to that socket still grants the same Docker API
+permissions. Neither container has Linux capabilities; the proxy's API filter remains its security boundary.
+Existing installations must migrate Uptime Kuma's data ownership before deploying this change
+([upgrading](upgrading.md#non-root-services)).
 
 ## What it doesn't protect
 
