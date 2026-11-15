@@ -26,7 +26,10 @@ file changes with them, in the same pull request.
 
 ## Service hardening and optional installs
 
-- Non-root users for the services whose images allow it.
+- Done: Uptime Kuma and PeaNUT run as uid 1000, autoheal as uid 65534, and Nginx Proxy Manager's nginx and
+  backend as uid 1000 behind its root init. Docker socket consumers retain their required socket access
+  ([security.md](security.md#hardening)); existing Uptime Kuma data needs the documented ownership migration
+  ([upgrading.md](upgrading.md#non-root-services)).
 - Done: optional services as opt-in Compose profiles, so a smaller installation can leave them out without
   changing existing full-stack deployments ([interfaces.md](interfaces.md#optional-services)).
 

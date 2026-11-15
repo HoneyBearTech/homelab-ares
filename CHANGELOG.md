@@ -8,6 +8,10 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Upgrading
 
+- Before deploying the non-root Uptime Kuma configuration, back up, stop Uptime Kuma and recursively change
+  `CONFIG_ROOT/uptime-kuma/config` to owner `1000:1000` ([instructions](docs/upgrading.md#non-root-services)).
+  On a host following `main`, prepare this ownership before merging; the previous root configuration also
+  works with it. Repeat after restoring data from an older root-owned backup.
 - **Move each service's data into its folder under `CONFIG_ROOT` before deploying this, then add `CONFIG_ROOT` to
   `.env`** (required; see `.env.example`). Stop the services first (`docker compose stop npm uptime-kuma peanut
   portainer`; every site behind the proxy is unreachable until the stack is up again) and leave them stopped until
@@ -79,6 +83,10 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Changed
 
+- Uptime Kuma runs as uid/gid 1000:1000 without `DAC_OVERRIDE`; autoheal runs as 65534:65534. Nginx Proxy
+  Manager uses upstream PUID/PGID support for nginx and its backend as 1000:1000, keeping its required root init.
+  PeaNUT remains non-root; Portainer and socket-proxy retain their host socket access. The smoke test checks
+  process identities and ping support with realistically owned data directories.
 - Dependabot auto-merge uses the Dependabot secret `AUTO_MERGE_TOKEN` when set (falling back to `GITHUB_TOKEN`), so
   updates that change workflow files can merge and a merge starts the push workflows. See `docs/dependencies.md`.
 - The smoke test runs a stack's own steps from `scripts/smoke-stack.sh` when that exists (`smoke_prepare` before the
