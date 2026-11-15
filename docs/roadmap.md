@@ -24,7 +24,7 @@ file changes with them, in the same pull request.
 - Done: scheduled backups copied off the host (`scripts/scheduled-backup.sh`, a systemd timer), reported to Uptime
   Kuma.
 
-## Later
+## Service hardening and optional installs
 
 - Non-root users for the services whose images allow it.
 - Done: optional services as opt-in Compose profiles, so a smaller installation can leave them out without
@@ -32,12 +32,15 @@ file changes with them, in the same pull request.
 
 ## Security and project health
 
+Infrastructure verified on 14 November 2026. Keeping checks green, maintaining badges and signing future
+releases are continuing obligations, rather than features that can be completed once.
+
 - Keep CI, CodeQL, Scorecard, dependency review and the DCO check green on every change.
-- Branch protection on `main` with required checks; private vulnerability reporting; secret scanning with
+- Done: branch protection on `main` with required checks; private vulnerability reporting; secret scanning with
   push protection.
 - Keep the OpenSSF Best Practices **Passing** and **Silver** badges (both reached) and **OSPS Baseline** Levels 1
   and 2 (met).
-- Signed releases with checksums, SBOM and SLSA provenance (every release since 0.1.0).
+- Keep signing releases with checksums, SBOM and SLSA provenance (every release since 0.1.0).
 
 ## What homelab-ares will not do
 

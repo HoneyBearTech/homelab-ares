@@ -52,6 +52,9 @@ All notable changes to homelab-ares are documented here. The format follows
 
 ### Fixed
 
+- Renovate now tracks the pinned busybox helper and actionlint, gitleaks and Trivy images in workflow commands,
+  including digest updates. Python updates use `pip-compile` to regenerate a consistent hash-locked dependency
+  set from exact direct pins; weekly lock-file maintenance refreshes transitive dependencies.
 - The smoke test's restore into a removed config directory also runs for a stack built from this one where only one
   service keeps its data in `CONFIG_ROOT/<service>/config`; it used to fail with "no service keeps only its config
   directory". Ares has several such services and isn't affected.
