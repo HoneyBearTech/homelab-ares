@@ -32,13 +32,13 @@ for Let's Encrypt's HTTP challenge).
 
 3. **Create the data directories and the proxy's network.** Source only a trusted local `.env` into the current
    shell. Creating directories under `CONFIG_ROOT` requires write permission; `sudo` supports the default location
-   on a fresh host. New directories are owned by root; change ownership only for PeaNUT, which runs as uid 1000:
+   on a fresh host. New directories are owned by root; change ownership for Uptime Kuma and PeaNUT, which run as uid 1000:
 
    ```sh
    . ./.env && sudo mkdir -p "$CONFIG_ROOT/npm/config" "$CONFIG_ROOT/npm/letsencrypt" \
      "$CONFIG_ROOT/npm/logrotate" "$CONFIG_ROOT/uptime-kuma/config" \
      "$CONFIG_ROOT/peanut/config" "$CONFIG_ROOT/portainer/config"
-   sudo chown 1000:1000 "$CONFIG_ROOT/peanut/config"   # PeaNUT runs as uid 1000
+   sudo chown 1000:1000 "$CONFIG_ROOT/uptime-kuma/config" "$CONFIG_ROOT/peanut/config"
    docker network create "$PROXY_NETWORK"
    ```
 

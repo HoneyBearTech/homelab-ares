@@ -74,14 +74,14 @@ cp .env.example .env && chmod 600 .env              # then set TZ, and CONFIG_RO
 . ./.env && sudo mkdir -p "$CONFIG_ROOT/npm/config" "$CONFIG_ROOT/npm/letsencrypt" \
   "$CONFIG_ROOT/npm/logrotate" "$CONFIG_ROOT/uptime-kuma/config" \
   "$CONFIG_ROOT/peanut/config" "$CONFIG_ROOT/portainer/config"
-sudo chown 1000:1000 "$CONFIG_ROOT/peanut/config"  # PeaNUT runs as uid 1000
+sudo chown 1000:1000 "$CONFIG_ROOT/uptime-kuma/config" "$CONFIG_ROOT/peanut/config"
 docker network create "$PROXY_NETWORK"
 docker compose up -d --wait
 ```
 
 Source only a trusted local `.env`; it is loaded into the current shell before its variables are used.
 Creating the directories requires permission to write under `CONFIG_ROOT`; `sudo` supports a fresh host's default
-location. New directories are created as root, with ownership changed only for PeaNUT, which runs as uid 1000.
+location. New directories are created as root, with ownership changed for Uptime Kuma and PeaNUT, which run as uid 1000.
 The full steps are in the [quick start](docs/quick-start.md).
 
 ## Usage

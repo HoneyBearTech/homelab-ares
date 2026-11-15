@@ -16,8 +16,8 @@ The [quick start](quick-start.md) is the short version of this page.
   small boards.
 - `flock` (util-linux, on Debian by default) if the host runs the pull agent ([Deploy lock](#deploy-lock)).
 - `age` if the backups are copied off the host encrypted ([Scheduled backups](#scheduled-backups)).
-- `CONFIG_ROOT/peanut/config` owned by (or writable for) uid 1000: PeaNUT runs as that user and saves its login
-  there.
+- `CONFIG_ROOT/uptime-kuma/config` and `CONFIG_ROOT/peanut/config` owned by (or writable for) uid 1000:
+  Uptime Kuma and PeaNUT run as that user.
 
 ## Where data lives
 
@@ -36,7 +36,7 @@ its settings and database in `CONFIG_ROOT/<service>/config`, and any other folde
 ```
 $CONFIG_ROOT/
   npm/{config,letsencrypt,logrotate}/
-  uptime-kuma/config/
+  uptime-kuma/config/     # owned by uid 1000
   peanut/config/          # owned by uid 1000
   portainer/config/
 ```
@@ -58,7 +58,7 @@ The services store their container paths, not the host's, so `CONFIG_ROOT` can m
 2. Create `.env` from `.env.example` (mode `600`) and set every value. Optionally create `autoheal.env` from
    `autoheal.env.example` (mode `600`) with a webhook URL for restart notices.
 3. Create the service folders under `CONFIG_ROOT` with permission to write there (the [quick start](quick-start.md)
-   step 3 uses `sudo` for the default location and changes only PeaNUT's directory to uid 1000). Source the trusted
+   step 3 uses `sudo` for the default location and changes Uptime Kuma's and PeaNUT's directories to uid 1000). Source the trusted
    local `.env` in the current shell before creating the folders and the proxy's network
    (`docker network create "$PROXY_NETWORK"`), then `docker compose up -d --wait`. New directories are owned by
    root unless explicitly changed; a folder you didn't create is also created by Docker, owned by root.
@@ -84,6 +84,8 @@ the stack at their existing data instead of starting empty:
   stack. Be especially careful with the proxy: while it's down, every service behind it is unreachable.
 - A newer image may migrate a service's data on its first start and can't go back; the backup is the way back.
 - **Uptime Kuma** runs the slim image, without Chromium: change any "Real Browser" monitor to an HTTP monitor first.
+  With the old container stopped, recursively change its copied data to uid/gid 1000:1000, as described under
+  [non-root services](upgrading.md#non-root-services).
 - **PeaNUT 6** asks for a login on first start if its settings have none yet, and its metrics then need that login:
   update whatever scrapes them. Its folder, `CONFIG_ROOT/peanut/config`, must belong to uid 1000.
 

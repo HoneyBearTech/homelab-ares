@@ -56,6 +56,26 @@ docker compose ps
 Then check each service's web UI and logs (`docker compose logs <service>`) for migration errors, and that a
 few proxied services still answer through the proxy.
 
+### Non-root services
+
+Before the first upgrade to the non-root configuration, back up the stack and stop Uptime Kuma. Its previous
+root process may have created root-owned database files even though the data directory already belongs to uid
+1000. Change ownership recursively while it is stopped, using the trusted local `.env`:
+
+```sh
+. ./.env
+docker compose stop uptime-kuma
+sudo chown -R 1000:1000 "$CONFIG_ROOT/uptime-kuma/config"
+docker compose up -d --wait uptime-kuma
+```
+
+Do this before merging the upgrade on a host that follows `main`; the old configuration can also run with this
+ownership. Keep the directory private (do not make it world-writable). Nginx Proxy Manager's init changes its own
+settings, certificate and logrotate ownership to 1000:1000 at startup; its nginx and backend then run as that user.
+PeaNUT remains uid 1000, and autoheal becomes uid 65534 with no persistent data to migrate. Portainer and socket-proxy
+keep their existing socket access ([security](security.md#hardening)). Backups preserve numeric owners; after
+restoring a backup made before this change, repeat the Uptime Kuma ownership step before starting it.
+
 ### Portainer and its agents
 
 Portainer's server (here) and the agents on the Docker hosts it manages are updated together, by hand. Upgrade the

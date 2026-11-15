@@ -116,7 +116,7 @@ Every service's data is in a host directory under `CONFIG_ROOT`; the stack decla
 | `/data` | `CONFIG_ROOT/npm/config` | npm: settings database, proxy host configuration, logs (`/data/logs`, not backed up) |
 | `/etc/letsencrypt` | `CONFIG_ROOT/npm/letsencrypt` | npm: TLS certificates, their private keys, the ACME account and any DNS-challenge credentials |
 | `/var/lib/logrotate` | `CONFIG_ROOT/npm/logrotate` | npm: when each log in `/data/logs` was last rotated |
-| `/app/data` | `CONFIG_ROOT/uptime-kuma/config` | uptime-kuma: database |
+| `/app/data` | `CONFIG_ROOT/uptime-kuma/config` | uptime-kuma: database; must be writable by uid 1000 |
 | `/config` | `CONFIG_ROOT/peanut/config` | peanut: settings (including the NUT server's address and login) and its own login (`auth.yaml`, a bcrypt hash); must be writable by uid 1000, which PeaNUT runs as |
 | `/data` | `CONFIG_ROOT/portainer/config` | portainer: database, users, environments |
 | `/var/run/docker.sock` | the Docker socket | portainer (read-write), socket-proxy (read-only); allowed exceptions, see below |
