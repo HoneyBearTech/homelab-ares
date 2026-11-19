@@ -38,7 +38,7 @@ x-healthcheck: &healthcheck
 services:
   npm:
     <<: *defaults
-    image: jc21/nginx-proxy-manager:2.17.0@sha256:91277490a919c792aa73b8d291af1ca84d32be74df988e543137976515763534
+    image: jc21/nginx-proxy-manager:2.17.1@sha256:04a9d0835560b9719ab577275f84fe1f713298a1c1e2bdefa034b87f10e062e1
     container_name: nginxproxymanager
     environment:
       TZ: ${TZ:?set TZ in .env}
@@ -85,7 +85,7 @@ services:
     <<: *defaults
     # The slim image: without the bundled Chromium (no "Real Browser" monitors) and embedded MariaDB (the database
     # is SQLite), which carried almost all of the image's known vulnerabilities.
-    image: louislam/uptime-kuma:2.5.11-slim@sha256:3c3a54a7338a41129163d933295076424e51b07f861a4cdf96a68b50bdde7a73
+    image: louislam/uptime-kuma:2.5.12-slim@sha256:f2a9bc853deb2a6f37df229649f96d62efc3cb24e38b08eee79234f76613d063
     container_name: uptime-kuma
     # Upstream's rootless stage differs only by USER node. Use that same uid with this pinned image; its data
     # directory must belong to 1000:1000 (see docs/upgrading.md before changing an existing installation).
@@ -136,7 +136,7 @@ services:
     <<: *defaults
     # The Alpine variant of the LTS release: it has a shell and wget for the health check (the default image has
     # neither). Updated by hand, together with the Portainer agents on the other hosts (not auto-merged).
-    image: portainer/portainer-ce:2.45.3-alpine@sha256:3d2e116d0aab38f13ee2b893e4fd931e69a09574eee0b597711a68d76754cce1
+    image: portainer/portainer-ce:2.45.4-alpine@sha256:15f6680e9c3260154684343566df3c168956e352a8cca8a50bcd81ce31df0143
     container_name: portainer
     read_only: true
     tmpfs:
@@ -198,7 +198,7 @@ services:
   # listing and inspecting containers, and restarting or stopping them (CONTAINERS, ALLOW_RESTARTS). Creating,
   # starting or deleting containers, exec, images, volumes and every other POST are refused.
   socket-proxy:
-    image: lscr.io/linuxserver/socket-proxy:3.4.7@sha256:823dda971e9a3951257eb251586a804199819fe1587c35faa43adc7b52a2ff16
+    image: lscr.io/linuxserver/socket-proxy:3.4.8@sha256:6beb1743581ec3b2ed1a2bafd617e8c7a1d7ae2fe835293e333327618fc2b925
     <<: *hardened
     container_name: socket-proxy
     restart: unless-stopped
