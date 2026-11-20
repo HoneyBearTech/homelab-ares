@@ -27,7 +27,7 @@ stack doesn't include or manage them.
 | Actor | Does |
 | --- | --- |
 | Maintainer | Merges pull requests (a merge deploys), tags releases, configures each service in its web UI |
-| Renovate | Opens grouped pull requests for image, pip tool and Action updates; the maintainer reviews and merges after required checks pass |
+| Renovate | Opens grouped pull requests for image, pip tool and Action updates; Renovate merges them once the required checks pass, after a three-day wait (Portainer excepted) |
 | CI | Lints, scans for secrets, tests the checker, resolves the Compose file, enforces the policy and smoke-tests the stack on arm64 on every pull request |
 | Pull agent | On the maintainer's server, about every 90 seconds: fetches `main` and, when it moved, fast-forwards the checkout and runs `docker compose pull` and `docker compose up -d` (it lives in the maintainer's private orchestration repository) |
 | Release workflow | On a version tag: checks the policy, writes the SBOM, signs the checksums, publishes the GitHub Release |
@@ -54,9 +54,9 @@ Each service keeps its settings and database in its own folder under `CONFIG_ROO
 ## How changes reach the host
 
 1. Renovate (or the maintainer) opens a pull request that changes an image's tag and digest.
-2. CI resolves the Compose file, runs the policy check and the smoke test; the maintainer reads the service's
-   release notes.
-3. The maintainer reviews and squash-merges after every required check passes, and takes a backup before merging.
+2. CI resolves the Compose file, runs the policy check and the smoke test.
+3. Renovate squash-merges the pull request once every required check passes and a new version has waited three
+   days (Portainer is merged by the maintainer, who reads the release notes and takes a backup first).
 4. Within about 90 seconds the pull agent on the host sees `main` move, fast-forwards its checkout and runs
    `docker compose pull && docker compose up -d --remove-orphans --wait`
    ([upgrading.md](upgrading.md#following-main)). A rollback is a revert pull request, deployed the same way.

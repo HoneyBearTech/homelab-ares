@@ -54,6 +54,12 @@ All notable changes to homelab-ares are documented here. The format follows
   backup is copied as before. The smoke test checks that only the archive leaves, that the key opens it into the
   backup `scripts/restore.sh` reads, and that another key doesn't.
 
+### Changed
+
+- Renovate's pull requests merge automatically once every required check passes, after a three-day wait: patch,
+  minor and major updates and image rebuilds alike (rebuilds and vulnerability fixes skip the wait). Portainer is
+  still updated by hand, with its agents.
+
 ### Fixed
 
 - Renovate now tracks the pinned busybox helper and actionlint, gitleaks and Trivy images in workflow commands,

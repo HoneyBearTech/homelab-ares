@@ -40,11 +40,18 @@ Keep pip-compile's generated header: Renovate uses its command to link the sourc
   proposes updates for Compose images, Python tools through `pip-compile`, GitHub Actions, GitLab CI images,
   pre-commit hooks, and the pinned helper and CI images in shell scripts and workflow commands. Docker tag updates
   keep their digest pins. Minor and patch updates are grouped;
-  major updates have individual PRs with a `major` label. The dependency dashboard tracks pending work. CI and
-  required review apply to every PR.
-- **No automatic merging**: `automerge` is explicitly false. The maintainer reviews and merges every update,
-  including image rebuilds, Portainer changes, and majors. A new major can migrate service data one way, so the
-  maintainer takes a backup before merging; a revert alone doesn't undo that migration.
+  major updates have individual PRs with a `major` label. The dependency dashboard tracks pending work. Every
+  required check applies to every PR.
+- **Updates merge automatically**: Renovate squash-merges its pull requests once every required check has
+  passed, majors and image rebuilds included, and a failing update stays open for the maintainer. **Portainer is
+  the exception** (`automerge` is false for it): its server and agents are updated together, by hand.
+- **A new version waits three days after its release** (`minimumReleaseAge`), so a release that is pulled or fixed
+  within days doesn't reach the server. Fixes for vulnerability alerts skip the wait. So does an image rebuild (a
+  new digest under the same tag): Docker Hub dates a rebuild by the tag's last push, so a tag rebuilt about weekly
+  would never get through the Monday-only schedule. A moved tag on a pre-commit hook or an Action keeps the wait,
+  and a version update from a registry that reports no release date isn't held back.
+- A new major can migrate service data one way, and an automatic merge deploys it unattended: the nightly backup
+  is the way back, and a revert alone doesn't undo that migration.
 - Renovate's `vulnerabilityAlerts` option is its vulnerability-alert PR path. Renovate's experimental
   `osvVulnerabilityAlerts` feature covers direct dependencies only for the `crate`, `go`, `hackage`, and `hex`
   data sources; it does **not** provide OSV coverage for this repository's Compose, pip, or GitHub Actions

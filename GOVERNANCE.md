@@ -33,8 +33,8 @@ reasoning, and may change course. Because the code is MIT-licensed, you can alwa
 | Security reporter | Anyone who reports a vulnerability | Report privately and allow time for a fix before disclosing, as described in [SECURITY.md](SECURITY.md). |
 
 Automated tools also take part: Renovate proposes updates to the stack's images, the Python check tools and the
-GitHub Actions; the maintainer reviews and merges every update, and a merge deploys to the maintainer's
-server. CI with the Compose policy check, CodeQL,
+GitHub Actions; Renovate merges them once every required check passes, after a three-day wait (Portainer is
+updated by hand), and a merge deploys to the maintainer's server. CI with the Compose policy check, CodeQL,
 dependency review and OpenSSF Scorecard check every change.
 
 ## Access to sensitive resources
@@ -52,7 +52,7 @@ Who can change the code, releases and project settings, as of the date of this f
 | The OpenSSF Best Practices badge entry | the maintainer | GitHub sign-in |
 | Pulling public images from Docker Hub in CI without the anonymous rate limit | the workflow steps that log in (CI, image scan) | a Docker Hub access token limited to reading public repositories |
 | Security advisories and private vulnerability reports | the maintainer | GitHub |
-| Automated changes | Renovate opens pull requests; automerge is disabled and every pull request requires maintainer review and required checks | Renovate, GitHub |
+| Automated changes | Renovate opens pull requests and merges them once the required checks pass (Portainer excepted) | Renovate, GitHub |
 
 There are no other collaborators. Workflows use the per-job `GITHUB_TOKEN`, read-only unless a job asks for
 more, and repository secrets are only available to the workflows that name them, never to pull requests
