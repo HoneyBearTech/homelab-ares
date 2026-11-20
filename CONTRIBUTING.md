@@ -81,7 +81,8 @@ The workflow and secret scanners run in containers; the exact commands are in
 - **GitHub Actions workflows**: [actionlint](https://github.com/rhysd/actionlint), which also runs
   [shellcheck](https://www.shellcheck.net/) on every `run:` script. Actions are pinned by commit SHA, jobs
   ask for the fewest permissions they need, and untrusted values reach scripts through `env:`, never
-  `${{ }}` inside `run:`.
+  `${{ }}` inside `run:`. [`.github/actionlint.yaml`](.github/actionlint.yaml) lists runner names actionlint
+  doesn't know yet, so a new GitHub-hosted runner image doesn't fail the lint before actionlint is updated.
 - Exceptions are made per line (for example `# noqa: S603 - reason`) with the reason next to them, never by
   turning a rule off for the whole repository.
 
