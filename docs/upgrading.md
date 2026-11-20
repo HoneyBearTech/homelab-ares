@@ -110,10 +110,11 @@ every 90 seconds; when `main` has moved, it fast-forwards the checkout, runs `do
   they run, and wait for a deploy in progress to finish before they stop anything, so the nightly backup never
   races a merge; the agent deploys on its first run after they finish
   ([Deploy lock](installing.md#deploy-lock)).
-- **The merge is the upgrade.** The maintainer reviews every update and takes a backup before merging; an update
-  that migrates a service's data one way can require restoring from the nightly
-  [scheduled backup](installing.md#scheduled-backups) if it breaks. Read the release notes and take a backup on
-  the server (`scripts/backup.sh`) before merging.
+- **The merge is the upgrade.** Renovate merges an update once the required checks pass, after the 3-day wait, and
+  a merge deploys within minutes. The nightly [scheduled backup](installing.md#scheduled-backups) is the way back:
+  an update that migrates a service's data one way can require restoring from it if it breaks. Portainer is the
+  exception: it is updated by hand, together with its agents
+  ([Portainer and its agents](#portainer-and-its-agents)).
 - **Rolling back** is a revert pull request, deployed the same way. If the service already migrated its data,
   restore that too ([Rolling back](#rolling-back)).
 - **Holding the server on a version**: check out that commit or release on the server (`git checkout vX.Y.Z`).
