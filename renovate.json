@@ -25,7 +25,8 @@
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": [
-      "security"
+      "security",
+      "openssf"
     ]
   },
   "osvVulnerabilityAlerts": true,
