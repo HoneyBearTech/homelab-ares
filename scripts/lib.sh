@@ -5,7 +5,7 @@
 # Reads and writes the services' data in throwaway containers; pinned like every other image (bumped by hand, see
 # docs/dependencies.md).
 # shellcheck disable=SC2034 # used by the scripts that source this file
-busybox=busybox:1.38.0@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e
+busybox=busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
 
 # Backups and restores take turns with homelab-ops' pull agent, which takes `flock --nonblock` on
 # <state root>/<pull_stack>/lock and skips its run when that's busy: deploy_lock waits for a deploy in progress, then
