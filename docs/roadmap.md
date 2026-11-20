@@ -44,6 +44,8 @@ releases are continuing obligations, rather than features that can be completed 
 - Keep the OpenSSF Best Practices **Passing** and **Silver** badges (both reached) and **OSPS Baseline** Levels 1
   and 2 (met).
 - Keep signing releases with checksums, SBOM and SLSA provenance (every release since 0.1.0).
+- Remove `ubuntu-26.04-arm` from `.github/actionlint.yaml` once a newer actionlint knows that runner name
+  (added 20 November 2026, while actionlint 1.7.12 was the newest release).
 
 ## What homelab-ares will not do
 
