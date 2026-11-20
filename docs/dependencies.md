@@ -44,7 +44,8 @@ Keep pip-compile's generated header: Renovate uses its command to link the sourc
   required check applies to every PR.
 - **Updates merge automatically**: Renovate squash-merges its pull requests once every required check has
   passed, majors and image rebuilds included, and a failing update stays open for the maintainer. **Portainer is
-  the exception** (`automerge` is false for it): its server and agents are updated together, by hand.
+  the exception** (`automerge` is false for it): its server and agents are updated together, by hand. It gets its
+  own pull request, so the weekly group still merges.
 - **A new version waits three days after its release** (`minimumReleaseAge`), so a release that is pulled or fixed
   within days doesn't reach the server. Fixes for vulnerability alerts skip the wait. So does an image rebuild (a
   new digest under the same tag): Docker Hub dates a rebuild by the tag's last push, so a tag rebuilt about weekly

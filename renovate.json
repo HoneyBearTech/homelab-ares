@@ -71,12 +71,13 @@
       ]
     },
     {
-      "description": "Portainer is updated by hand: its server and its agents must be updated together. Never merged automatically.",
+      "description": "Portainer is updated by hand: its server and its agents must be updated together. Never merged automatically. Kept out of the update group (its own pull request), because a group merges automatically only when every update in it may.",
       "matchPackageNames": [
         "portainer/portainer-ce",
         "portainer/agent"
       ],
-      "automerge": false
+      "automerge": false,
+      "groupName": null
     }
   ],
   "pip-compile": {
