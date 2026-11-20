@@ -29,13 +29,28 @@
     ]
   },
   "osvVulnerabilityAlerts": true,
-  "automerge": false,
+  "automerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "platformAutomerge": true,
+  "minimumReleaseAge": "3 days",
+  "minimumReleaseAgeBehaviour": "timestamp-optional",
   "packageRules": [
     {
       "matchDatasources": [
         "docker"
       ],
       "pinDigests": true
+    },
+    {
+      "description": "An image rebuild (a new digest under the same tag) skips the 3-day wait: Docker Hub dates a rebuild by the tag's last push, so a tag rebuilt about weekly would restart the clock each time and never get through the Monday-only schedule. Only images: a moved tag on a pre-commit hook or an Action keeps the wait.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "digest"
+      ],
+      "minimumReleaseAge": null
     },
     {
       "matchUpdateTypes": [
@@ -54,6 +69,15 @@
       "addLabels": [
         "major"
       ]
+    },
+    {
+      "description": "Portainer is updated by hand: its server and its agents must be updated together. Never merged automatically. Kept out of the update group (its own pull request), because a group merges automatically only when every update in it may.",
+      "matchPackageNames": [
+        "portainer/portainer-ce",
+        "portainer/agent"
+      ],
+      "automerge": false,
+      "groupName": null
     }
   ],
   "pip-compile": {

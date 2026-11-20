@@ -42,7 +42,8 @@ Docker Compose stack for Ares, a homelab Debian 13 (arm64) server. Version-pinne
   stopping containers
 
 Every service has a health check, and every image is pinned by tag **and** digest, for `linux/arm64`. Renovate
-proposes dependency updates in pull requests; the maintainer reviews and merges them after CI checks pass. The
+proposes dependency updates in pull requests and merges them once every required CI check passes, after a
+three-day wait; Portainer is updated by hand. The
 maintainer's server follows `main`: a pull agent there applies each merge within a couple of minutes
 ([upgrading](docs/upgrading.md#following-main)). Nothing updates from a
 registry tag by itself: what runs is always a commit in `main`. Metrics dashboards
